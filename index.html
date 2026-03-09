@@ -91,7 +91,7 @@
                             </tr>
                         </thead>
                         <tbody id="cuerpo-tabla-reportes" class="bg-white">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -179,7 +179,34 @@
         }
 
         function cerrarSesion() { usuarioActualId = null; cambiarVista('vista-login'); }
-        async function actualizarPassword() { /* Omitido */ }
+
+        // ==========================================
+        // FUNCIÓN DE CONTRASEÑA REPARADA
+        // ==========================================
+        async function actualizarPassword() {
+            const usuario = document.getElementById('pass-usuario').value;
+            const nuevaPassword = document.getElementById('pass-nueva').value;
+
+            if (!usuario || !nuevaPassword) {
+                return Swal.fire('Error', 'Llena todos los campos', 'error');
+            }
+
+            const res = await fetch('/cambiar-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usuario, nuevaPassword })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                Swal.fire('¡Listo!', data.mensaje, 'success').then(() => {
+                    document.getElementById('form-password').reset();
+                    cambiarVista('vista-login');
+                });
+            } else {
+                Swal.fire('Error', data.error, 'error');
+            }
+        }
 
         async function crearCuestionario() {
             const titulo = document.getElementById('nuevo-cuestionario-titulo').value; if(!titulo) return Swal.fire('Error','Escribe un título.','error');
@@ -254,9 +281,6 @@
             if(res.ok){ Swal.fire('¡Listo!', data.mensaje, 'success'); document.getElementById('lista-alumnos-asignar').value=''; document.getElementById('lista-cuestionarios-asignar').value=''; } else { Swal.fire('Error', data.error, 'error'); } 
         }
 
-        // ==========================================
-        // FUNCIÓN DE REPORTES ACTUALIZADA (ZONA HORARIA CDMX)
-        // ==========================================
         async function verReportes() {
             const res = await fetch('/reportes');
             const reportes = await res.json();
@@ -268,11 +292,9 @@
                 tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-gray-500 italic">No hay exámenes contestados aún.</td></tr>';
             } else {
                 reportes.forEach(r => {
-                    // 1. Arreglamos la fecha de la base de datos para que Javascript sepa que es tiempo universal (UTC)
                     const fechaIso = r.fecha.replace(' ', 'T') + 'Z';
                     const fechaObj = new Date(fechaIso);
                     
-                    // 2. Forzamos que se muestre con la hora de la Ciudad de México
                     const fechaBonita = fechaObj.toLocaleString('es-MX', {
                         timeZone: 'America/Mexico_City',
                         day: '2-digit',
@@ -301,7 +323,6 @@
             document.getElementById('tabla-reportes-container').classList.remove('hidden');
         }
 
-        // --- MOTOR DE EXÁMENES (ALUMNO) ---
         function mezclarArreglo(arreglo) {
             for (let i = arreglo.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]]; }
             return arreglo;
