@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Evaluaciones</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-2xl my-8">
+        
+        <div id="vista-login">
+            <h2 class="text-2xl font-bold text-gray-800 text-center mb-6">Iniciar Sesión</h2>
+            <form id="form-login">
+                <div class="mb-4"><label class="block text-sm font-semibold mb-2">Usuario</label><input type="text" id="login-usuario" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-slate-800" placeholder="Tu usuario"></div>
+                <div class="mb-6"><label class="block text-sm font-semibold mb-2">Contraseña</label><input type="password" id="login-password" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-slate-800" placeholder="••••••••"></div>
+                <button type="button" onclick="iniciarSesion()" class="w-full bg-slate-800 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-700">Entrar</button>
+            </form>
+            <div class="mt-6 text-center text-sm text-gray-600">
+                <p>¿No tienes cuenta? <button onclick="cambiarVista('vista-registro')" class="text-slate-800 font-bold hover:underline">Regístrate</button></p>
+                <p class="mt-2"><button onclick="cambiarVista('vista-password')" class="text-slate-800 hover:underline">¿Cambiar contraseña?</button></p>
+            </div>
+        </div>
+
+        <div id="vista-registro" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-800 text-center mb-6">Crear Cuenta</h2>
+            <form id="form-registro">
+                <div class="mb-4"><label class="block text-sm font-semibold mb-2">Usuario</label><input type="text" id="reg-usuario" class="w-full px-4 py-2 border rounded-lg"></div>
+                <div class="mb-4"><label class="block text-sm font-semibold mb-2">Correo</label><input type="email" id="reg-correo" class="w-full px-4 py-2 border rounded-lg"></div>
+                <div class="mb-6"><label class="block text-sm font-semibold mb-2">Contraseña</label><input type="password" id="reg-password" class="w-full px-4 py-2 border rounded-lg"></div>
+                <button type="button" onclick="registrarUsuario()" class="w-full bg-slate-800 text-white font-bold py-2 px-4 rounded-lg">Registrarse</button>
+            </form>
+            <div class="mt-6 text-center text-sm"><button onclick="cambiarVista('vista-login')" class="font-bold hover:underline">← Volver al inicio</button></div>
+        </div>
+
+        <div id="vista-password" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-800 text-center mb-6">Cambiar Contraseña</h2>
+            <form id="form-password">
+                <div class="mb-4"><label class="block text-sm font-semibold mb-2">Usuario</label><input type="text" id="pass-usuario" class="w-full px-4 py-2 border rounded-lg"></div>
+                <div class="mb-4"><label class="block text-sm font-semibold mb-2">Nueva Contraseña</label><input type="password" id="pass-nueva" class="w-full px-4 py-2 border rounded-lg"></div>
+                <button type="button" onclick="actualizarPassword()" class="w-full bg-slate-800 text-white font-bold py-2 px-4 rounded-lg">Actualizar</button>
+            </form>
+            <div class="mt-6 text-center text-sm"><button onclick="cambiarVista('vista-login')" class="font-bold hover:underline">← Volver al inicio</button></div>
+        </div>
+
+        <div id="vista-dashboard" class="hidden text-center py-6">
+            <div class="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>
+            <h2 class="text-3xl font-bold mb-2">Zona de Estudio</h2>
+            <p id="texto-bienvenida-alumno" class="text-gray-600 mb-6">Tus simuladores disponibles:</p>
+            <div id="contenedor-mis-examenes" class="mb-8 space-y-3"></div>
+            <button onclick="cerrarSesion()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg">Cerrar Sesión</button>
+        </div>
+
+        <div id="vista-admin" class="hidden text-center py-4">
+            <h2 class="text-2xl font-bold mb-4">Panel de Administración</h2>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
+                <h3 class="font-bold text-slate-700 mb-2">1. Crear Nuevo Cuestionario</h3>
+                <input type="text" id="nuevo-cuestionario-titulo" class="w-full px-3 py-2 border rounded-lg mb-3">
+                <button onclick="crearCuestionario()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">Guardar Cuestionario</button>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
+                <h3 class="font-bold text-slate-700 mb-2">2. Gestionar Preguntas</h3>
+                <select id="lista-cuestionarios-editar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
+                <button onclick="abrirEditorPreguntas()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700">Editar Cuestionario</button>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-6 border text-left border-purple-200">
+                <h3 class="font-bold text-purple-700 mb-2">3. Habilitar Acceso</h3>
+                <select id="lista-alumnos-asignar" class="w-full px-3 py-2 border rounded-lg mb-2 bg-white"></select>
+                <select id="lista-cuestionarios-asignar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
+                <button onclick="asignarCuestionario()" class="w-full bg-purple-600 text-white font-bold py-2 rounded-lg hover:bg-purple-700">Otorgar Acceso</button>
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-lg mb-6 border text-left border-orange-200">
+                <h3 class="font-bold text-orange-700 mb-2">4. Reportes de Estudiantes</h3>
+                <button onclick="verReportes()" class="w-full bg-orange-500 text-white font-bold py-2 rounded-lg mb-3 hover:bg-orange-600">Ver Historial Completo</button>
+                
+                <div id="tabla-reportes-container" class="hidden overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-600 border">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-200">
+                            <tr>
+                                <th class="px-3 py-2 border">Alumno</th>
+                                <th class="px-3 py-2 border">Examen</th>
+                                <th class="px-3 py-2 border text-center">Aciertos</th>
+                                <th class="px-3 py-2 border text-center">Calificación</th>
+                                <th class="px-3 py-2 border">Fecha (CDMX)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpo-tabla-reportes" class="bg-white">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button onclick="cerrarSesion()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg hover:bg-red-600">Cerrar Sesión</button>
+        </div>
+
+        <div id="vista-editor" class="hidden py-2 text-left">
+            <h2 class="text-xl font-bold text-gray-800 mb-1 border-b pb-2" id="titulo-cuestionario-activo">Cuestionario</h2>
+            
+            <h3 class="font-bold text-sm text-gray-600 mt-4 mb-2">Preguntas en este cuestionario:</h3>
+            <div id="contenedor-preguntas-existentes" class="mb-6 max-h-40 overflow-y-auto space-y-2 border-b pb-4 bg-gray-50 p-2 rounded"></div>
+
+            <h3 class="font-bold text-emerald-700 mb-2 mt-4">Añadir Nueva Pregunta:</h3>
+            <div class="mb-4">
+                <textarea id="texto-pregunta" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500" rows="3" placeholder="¿Cuál es la pregunta?"></textarea>
+            </div>
+            <p class="text-sm font-bold text-gray-700 mb-2">Opciones (marca la correcta 🔘):</p>
+            <div class="flex items-center mb-2"><input type="radio" name="opcion_correcta" value="0" class="w-5 h-5 mr-2 text-emerald-600" checked><input type="text" id="opcion-0" class="w-full px-3 py-1 border rounded-lg"></div>
+            <div class="flex items-center mb-2"><input type="radio" name="opcion_correcta" value="1" class="w-5 h-5 mr-2 text-emerald-600"><input type="text" id="opcion-1" class="w-full px-3 py-1 border rounded-lg"></div>
+            <div class="flex items-center mb-2"><input type="radio" name="opcion_correcta" value="2" class="w-5 h-5 mr-2 text-emerald-600"><input type="text" id="opcion-2" class="w-full px-3 py-1 border rounded-lg"></div>
+            <div class="flex items-center mb-4"><input type="radio" name="opcion_correcta" value="3" class="w-5 h-5 mr-2 text-emerald-600"><input type="text" id="opcion-3" class="w-full px-3 py-1 border rounded-lg"></div>
+
+            <button onclick="guardarPregunta()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg mb-2 hover:bg-emerald-700">Guardar Pregunta</button>
+            <button onclick="cambiarVista('vista-admin')" class="w-full bg-gray-400 text-white font-bold py-2 rounded-lg hover:bg-gray-500">Terminar y Volver</button>
+        </div>
+
+        <div id="vista-hacer-examen" class="hidden text-left py-2">
+            <h2 id="titulo-examen-en-curso" class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Examen en curso</h2>
+            <div id="contenedor-preguntas" class="mb-8 space-y-8"></div>
+            <button onclick="finalizarExamen()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-lg text-lg">Finalizar y Calificar</button>
+            <button onclick="cambiarVista('vista-dashboard')" class="w-full text-gray-500 font-bold py-2 mt-2 hover:underline">Abandonar intento</button>
+        </div>
+
+        <div id="vista-resultados" class="hidden text-center py-4">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Resultados</h2>
+            <div class="bg-slate-100 p-6 rounded-xl mb-6 inline-block w-full">
+                <p class="text-gray-600 font-semibold mb-1">Tu calificación:</p>
+                <p id="texto-calificacion" class="text-5xl font-black text-blue-600">0 / 0</p>
+                <p id="texto-calificacion-decimal" class="text-2xl font-bold text-gray-500 mt-2">Nota: 0.0</p>
+            </div>
+            <h3 class="font-bold text-left text-gray-700 mb-4 border-b pb-1">Desglose de respuestas:</h3>
+            <div id="contenedor-desglose" class="text-left space-y-4 mb-8 max-h-96 overflow-y-auto pr-2"></div>
+            <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mis simuladores</button>
+        </div>
+
+    </div>
+
+    <script>
+        let usuarioActualId = null;
+        let cuestionarioActualId = null;
+        let examenActivo = []; 
+        let respuestasUsuario = {}; 
+
+        function cambiarVista(vistaDestino) {
+            const vistas = ['vista-login', 'vista-registro', 'vista-password', 'vista-dashboard', 'vista-admin', 'vista-editor', 'vista-hacer-examen', 'vista-resultados'];
+            vistas.forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.getElementById(vistaDestino).classList.remove('hidden');
+            window.scrollTo(0, 0); 
+        }
+
+        async function registrarUsuario() {
+            const usuario = document.getElementById('reg-usuario').value; const correo = document.getElementById('reg-correo').value; const password = document.getElementById('reg-password').value;
+            const res = await fetch('/registro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario, correo, password }) });
+            const data = await res.json();
+            if (res.ok) { Swal.fire('¡Éxito!', data.mensaje, 'success'); cambiarVista('vista-login'); } else { Swal.fire('Error', data.error, 'error'); }
+        }
+
+        async function iniciarSesion() {
+            const usuario = document.getElementById('login-usuario').value; const password = document.getElementById('login-password').value;
+            const res = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario, password }) });
+            const data = await res.json();
+            if (res.ok) {
+                usuarioActualId = data.id;
+                Swal.fire({ title: '¡Conectado!', text: data.mensaje, icon: 'success', timer: 1000, showConfirmButton: false }).then(() => {
+                    document.getElementById('form-login').reset();
+                    if (data.rol === 'admin') {
+                        cargarCuestionariosEnSelect(); cargarAlumnosEnSelect(); cambiarVista('vista-admin');
+                    } else {
+                        document.getElementById('texto-bienvenida-alumno').innerText = `Hola, ${usuario}. Listo para estudiar.`;
+                        cargarMisExamenes(); 
+                    }
+                });
+            } else { Swal.fire('Error', data.error, 'error'); }
+        }
+
+        function cerrarSesion() { usuarioActualId = null; cambiarVista('vista-login'); }
+        async function actualizarPassword() { /* Omitido */ }
+
+        async function crearCuestionario() {
+            const titulo = document.getElementById('nuevo-cuestionario-titulo').value; if(!titulo) return Swal.fire('Error','Escribe un título.','error');
+            const res = await fetch('/crear-cuestionario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo }) });
+            if(res.ok){ Swal.fire('¡Éxito!', 'Cuestionario creado', 'success'); document.getElementById('nuevo-cuestionario-titulo').value=''; cargarCuestionariosEnSelect(); } 
+        }
+
+        async function cargarCuestionariosEnSelect() {
+            const res = await fetch('/cuestionarios'); const cuestionarios = await res.json();
+            const sE = document.getElementById('lista-cuestionarios-editar'); const sA = document.getElementById('lista-cuestionarios-asignar');
+            sE.innerHTML = '<option value="">Selecciona...</option>'; sA.innerHTML = '<option value="">Selecciona...</option>';
+            cuestionarios.forEach(c => { sE.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; sA.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; });
+        }
+
+        function abrirEditorPreguntas() {
+            const s = document.getElementById('lista-cuestionarios-editar'); const id = s.value;
+            if(!id) return Swal.fire('Ojo','Selecciona un cuestionario.','warning');
+            cuestionarioActualId = id;
+            document.getElementById('titulo-cuestionario-activo').innerText = `Gestor de Preguntas: ${s.options[s.selectedIndex].text}`;
+            cargarPreguntasExistentes(); 
+            cambiarVista('vista-editor');
+        }
+
+        async function cargarPreguntasExistentes() {
+            const res = await fetch(`/preguntas-admin/${cuestionarioActualId}`);
+            const preguntas = await res.json();
+            const contenedor = document.getElementById('contenedor-preguntas-existentes');
+            contenedor.innerHTML = '';
+            
+            if (preguntas.length === 0) {
+                contenedor.innerHTML = '<p class="text-sm text-gray-500 italic p-2">No hay preguntas en este simulador aún.</p>';
+            } else {
+                preguntas.forEach((p, i) => {
+                    contenedor.innerHTML += `
+                        <div class="flex justify-between items-center bg-white p-2 border rounded shadow-sm text-sm">
+                            <span class="truncate pr-2 font-medium text-gray-700">${i + 1}. ${p.texto_pregunta}</span>
+                            <button onclick="borrarPregunta(${p.id})" class="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-bold px-2 py-1 rounded transition">Borrar</button>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        async function borrarPregunta(idPregunta) {
+            const confirmar = await Swal.fire({ title: '¿Borrar pregunta?', text: "No podrás revertir esto.", icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, borrar', cancelButtonText: 'Cancelar' });
+            if (!confirmar.isConfirmed) return;
+            const res = await fetch(`/eliminar-pregunta/${idPregunta}`, { method: 'DELETE' });
+            if (res.ok) { Swal.fire({ title: 'Borrada', icon: 'success', timer: 1000, showConfirmButton: false }); cargarPreguntasExistentes(); }
+        }
+
+        async function guardarPregunta() {
+            const tp = document.getElementById('texto-pregunta').value; const op0 = document.getElementById('opcion-0').value; const op1 = document.getElementById('opcion-1').value; const op2 = document.getElementById('opcion-2').value; const op3 = document.getElementById('opcion-3').value;
+            const ci = document.querySelector('input[name="opcion_correcta"]:checked').value;
+            if(!tp || !op0 || !op1 || !op2 || !op3) return Swal.fire('Error','Llena todo.','error');
+            const opciones = [ {texto:op0, es_correcta:ci==0?1:0}, {texto:op1, es_correcta:ci==1?1:0}, {texto:op2, es_correcta:ci==2?1:0}, {texto:op3, es_correcta:ci==3?1:0} ];
+            const res = await fetch('/agregar-pregunta', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cuestionario_id:cuestionarioActualId, texto_pregunta:tp, opciones}) });
+            if(res.ok){
+                Swal.fire({title:'¡Guardada!', icon:'success', timer:1000, showConfirmButton:false});
+                document.getElementById('texto-pregunta').value=''; document.getElementById('opcion-0').value=''; document.getElementById('opcion-1').value=''; document.getElementById('opcion-2').value=''; document.getElementById('opcion-3').value='';
+                document.querySelector('input[name="opcion_correcta"][value="0"]').checked=true;
+                cargarPreguntasExistentes(); 
+            }
+        }
+
+        async function cargarAlumnosEnSelect() { const res = await fetch('/alumnos'); const alumnos = await res.json(); const s = document.getElementById('lista-alumnos-asignar'); s.innerHTML = '<option value="">Selecciona un alumno...</option>'; alumnos.forEach(a => { s.innerHTML += `<option value="${a.id}">${a.usuario}</option>`; }); }
+        
+        async function asignarCuestionario() {
+            const ui = document.getElementById('lista-alumnos-asignar').value; const ci = document.getElementById('lista-cuestionarios-asignar').value;
+            if(!ui || !ci) return Swal.fire('Ojo','Selecciona alumno y cuestionario.','warning');
+            const res = await fetch('/asignar', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({usuario_id:ui, cuestionario_id:ci}) });
+            const data = await res.json();
+            if(res.ok){ Swal.fire('¡Listo!', data.mensaje, 'success'); document.getElementById('lista-alumnos-asignar').value=''; document.getElementById('lista-cuestionarios-asignar').value=''; } else { Swal.fire('Error', data.error, 'error'); } 
+        }
+
+        // ==========================================
+        // FUNCIÓN DE REPORTES ACTUALIZADA (ZONA HORARIA CDMX)
+        // ==========================================
+        async function verReportes() {
+            const res = await fetch('/reportes');
+            const reportes = await res.json();
+            
+            const tbody = document.getElementById('cuerpo-tabla-reportes');
+            tbody.innerHTML = '';
+            
+            if (reportes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-gray-500 italic">No hay exámenes contestados aún.</td></tr>';
+            } else {
+                reportes.forEach(r => {
+                    // 1. Arreglamos la fecha de la base de datos para que Javascript sepa que es tiempo universal (UTC)
+                    const fechaIso = r.fecha.replace(' ', 'T') + 'Z';
+                    const fechaObj = new Date(fechaIso);
+                    
+                    // 2. Forzamos que se muestre con la hora de la Ciudad de México
+                    const fechaBonita = fechaObj.toLocaleString('es-MX', {
+                        timeZone: 'America/Mexico_City',
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    
+                    const porcentaje = r.aciertos / r.total_preguntas;
+                    const calificacionSobre10 = (porcentaje * 10).toFixed(1); 
+                    const colorNota = porcentaje >= 0.6 ? 'text-green-600' : 'text-red-500';
+
+                    tbody.innerHTML += `
+                        <tr class="border-b hover:bg-gray-50 transition">
+                            <td class="px-3 py-3 font-semibold text-gray-800">${r.usuario}</td>
+                            <td class="px-3 py-3">${r.titulo}</td>
+                            <td class="px-3 py-3 text-center text-gray-600 font-bold">${r.aciertos} / ${r.total_preguntas}</td>
+                            <td class="px-3 py-3 text-center font-black ${colorNota}">${calificacionSobre10}</td>
+                            <td class="px-3 py-3 text-xs text-gray-500">${fechaBonita}</td>
+                        </tr>
+                    `;
+                });
+            }
+            document.getElementById('tabla-reportes-container').classList.remove('hidden');
+        }
+
+        // --- MOTOR DE EXÁMENES (ALUMNO) ---
+        function mezclarArreglo(arreglo) {
+            for (let i = arreglo.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]]; }
+            return arreglo;
+        }
+
+        async function cargarMisExamenes() {
+            const res = await fetch(`/mis-cuestionarios/${usuarioActualId}`); const cuestionarios = await res.json();
+            const contenedor = document.getElementById('contenedor-mis-examenes'); contenedor.innerHTML = '';
+            if (cuestionarios.length === 0) { contenedor.innerHTML = '<p class="text-gray-500 italic">Aún no tienes simuladores asignados.</p>'; } 
+            else { cuestionarios.forEach(c => { contenedor.innerHTML += `<button onclick="iniciarExamen(${c.id}, '${c.titulo}')" class="w-full bg-blue-50 text-blue-700 border border-blue-200 font-bold py-3 px-4 rounded-lg hover:bg-blue-600 hover:text-white transition shadow-sm text-left flex justify-between items-center"><span>📝 ${c.titulo}</span><span>▶️</span></button>`; }); }
+            cambiarVista('vista-dashboard');
+        }
+
+        async function iniciarExamen(id, titulo) {
+            cuestionarioActualId = id; document.getElementById('titulo-examen-en-curso').innerText = titulo;
+            const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
+            cambiarVista('vista-hacer-examen');
+            const res = await fetch(`/examen/${id}`); examenActivo = await res.json(); respuestasUsuario = {};
+            if (examenActivo.length === 0) { contenedor.innerHTML = '<p class="text-center text-red-500">Este examen no tiene preguntas aún.</p>'; return; }
+
+            examenActivo = mezclarArreglo(examenActivo); 
+            contenedor.innerHTML = ''; 
+            
+            examenActivo.forEach((pregunta, index) => {
+                pregunta.opciones = mezclarArreglo(pregunta.opciones); 
+                let htmlOpciones = '';
+                pregunta.opciones.forEach(opcion => { htmlOpciones += `<label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-blue-50 transition"><input type="radio" name="pregunta_${pregunta.id}" value="${opcion.id}" onchange="registrarRespuesta(${pregunta.id}, ${opcion.id})" class="w-5 h-5 text-blue-600 mr-3"><span class="text-gray-700">${opcion.texto}</span></label>`; });
+                contenedor.innerHTML += `<div class="bg-gray-50 p-5 rounded-xl border border-gray-200"><p class="font-bold text-gray-800 mb-4"><span class="text-blue-600">${index + 1}.</span> ${pregunta.texto}</p><div class="space-y-2">${htmlOpciones}</div></div>`;
+            });
+        }
+
+        function registrarRespuesta(preguntaId, opcionId) { respuestasUsuario[preguntaId] = parseInt(opcionId); }
+
+        async function finalizarExamen() {
+            const contestadas = Object.keys(respuestasUsuario).length;
+            if (contestadas < examenActivo.length) {
+                const confirmar = await Swal.fire({ title: '¿Estás seguro?', text: `Te faltan ${examenActivo.length - contestadas} preguntas.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, finalizar', cancelButtonText: 'Seguir' });
+                if (!confirmar.isConfirmed) return;
+            }
+
+            let aciertos = 0; let desgloseHTML = '';
+            examenActivo.forEach((pregunta, index) => {
+                const idSeleccionado = respuestasUsuario[pregunta.id]; 
+                const opcionCorrecta = pregunta.opciones.find(o => o.es_correcta === 1);
+                const opcionElegida = pregunta.opciones.find(o => o.id === idSeleccionado);
+                let esCorrecto = false;
+                if (opcionElegida && opcionElegida.es_correcta === 1) { aciertos++; esCorrecto = true; }
+
+                desgloseHTML += `<div class="p-4 rounded-lg border ${esCorrecto ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}"><p class="font-semibold text-gray-800 mb-1">${index + 1}. ${pregunta.texto}</p>${esCorrecto ? `<p class="text-sm text-green-700">✅ <b>Correcto:</b> ${opcionCorrecta.texto}</p>` : `<p class="text-sm text-red-700 mb-1">❌ <b>Tu respuesta:</b> ${opcionElegida ? opcionElegida.texto : '<i>Sin contestar</i>'}</p><p class="text-sm text-green-700">💡 <b>Respuesta correcta:</b> ${opcionCorrecta.texto}</p>`}</div>`;
+            });
+
+            document.getElementById('texto-calificacion').innerText = `${aciertos} / ${examenActivo.length}`;
+            
+            const calificacionDecimal = ((aciertos / examenActivo.length) * 10).toFixed(1);
+            const colorNota = calificacionDecimal >= 6.0 ? 'text-green-600' : 'text-red-500';
+            document.getElementById('texto-calificacion-decimal').innerHTML = `Nota: <span class="${colorNota}">${calificacionDecimal}</span>`;
+
+            document.getElementById('contenedor-desglose').innerHTML = desgloseHTML;
+
+            await fetch('/guardar-resultado', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_id: usuarioActualId, cuestionario_id: cuestionarioActualId, aciertos: aciertos, total: examenActivo.length }) });
+            cambiarVista('vista-resultados');
+        }
+    </script>
+</body>
+</html>
