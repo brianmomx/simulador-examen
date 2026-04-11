@@ -28,7 +28,11 @@ const initDB = async () => {
         await pool.query(`CREATE TABLE IF NOT EXISTS asignaciones (usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, cuestionario_id INTEGER REFERENCES cuestionarios(id) ON DELETE CASCADE)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS resultados (id SERIAL PRIMARY KEY, usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, cuestionario_id INTEGER REFERENCES cuestionarios(id) ON DELETE CASCADE, aciertos INTEGER, total_preguntas INTEGER, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS detalles_resultado (id SERIAL PRIMARY KEY, resultado_id INTEGER REFERENCES resultados(id) ON DELETE CASCADE, pregunta_id INTEGER REFERENCES preguntas(id) ON DELETE CASCADE, opcion_seleccionada_id INTEGER REFERENCES opciones(id) ON DELETE CASCADE)`);
-        console.log("¡Conectado exitosamente a la base de datos!");
+        
+        // Columna para identificar si el examen fue de la Zona de Refuerzo
+        try { await pool.query(`ALTER TABLE resultados ADD COLUMN es_repaso BOOLEAN DEFAULT false`); } catch(e) {}
+        
+        console.log("¡Conectado exitosamente a la base de datos (Motor Inteligente Activado)!");
     } catch (err) {
         console.error("Error al crear tablas:", err);
     }
@@ -71,7 +75,6 @@ app.post('/cambiar-password', async (req, res) => {
 
 app.post('/crear-categoria', async (req, res) => {
     const { nombre, color } = req.body;
-    if(!nombre || !color) return res.status(400).json({ error: "Falta nombre o color" });
     try {
         await pool.query(`INSERT INTO categorias (nombre, color) VALUES ($1, $2)`, [nombre, color]);
         res.json({ mensaje: "Categoría creada exitosamente" });
@@ -79,10 +82,8 @@ app.post('/crear-categoria', async (req, res) => {
 });
 
 app.get('/categorias', async (req, res) => {
-    try {
-        const result = await pool.query(`SELECT * FROM categorias ORDER BY nombre ASC`);
-        res.json(result.rows);
-    } catch(e) { res.status(500).json({ error: "Error al cargar categorías" }); }
+    try { const result = await pool.query(`SELECT * FROM categorias ORDER BY nombre ASC`); res.json(result.rows); } 
+    catch(e) { res.status(500).json({ error: "Error al cargar categorías" }); }
 });
 
 app.post('/crear-cuestionario', async (req, res) => {
@@ -95,20 +96,15 @@ app.post('/crear-cuestionario', async (req, res) => {
 });
 
 app.get('/cuestionarios', async (req, res) => { 
-    const result = await pool.query(`
-        SELECT c.*, cat.nombre as categoria_nombre 
-        FROM cuestionarios c LEFT JOIN categorias cat ON c.categoria_id = cat.id ORDER BY c.id DESC
-    `); 
+    const result = await pool.query(`SELECT c.*, cat.nombre as categoria_nombre FROM cuestionarios c LEFT JOIN categorias cat ON c.categoria_id = cat.id ORDER BY c.id DESC`); 
     res.json(result.rows); 
 });
 
 app.put('/editar-cuestionario/:id', async (req, res) => {
     const { titulo, categoria_id } = req.body;
     const catId = categoria_id ? parseInt(categoria_id) : null;
-    try {
-        await pool.query(`UPDATE cuestionarios SET titulo = $1, categoria_id = $2 WHERE id = $3`, [titulo, catId, req.params.id]);
-        res.json({ mensaje: "Actualizado exitosamente" });
-    } catch(err) { res.status(500).json({ error: "Error al actualizar." }); }
+    try { await pool.query(`UPDATE cuestionarios SET titulo = $1, categoria_id = $2 WHERE id = $3`, [titulo, catId, req.params.id]); res.json({ mensaje: "Actualizado" }); } 
+    catch(err) { res.status(500).json({ error: "Error al actualizar." }); }
 });
 
 app.post('/agregar-pregunta', async (req, res) => {
@@ -118,12 +114,11 @@ app.post('/agregar-pregunta', async (req, res) => {
         const pregunta_id = resultPreg.rows[0].id; 
         for(let op of opciones) { await pool.query(`INSERT INTO opciones (pregunta_id, texto_opcion, es_correcta) VALUES ($1, $2, $3)`, [pregunta_id, op.texto, op.es_correcta]); }
         res.json({ mensaje: "¡Pregunta agregada!" });
-    } catch(err) { res.status(500).json({ error: "Error al guardar pregunta." }); }
+    } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
 app.get('/alumnos', async (req, res) => { 
-    const result = await pool.query(`SELECT id, usuario FROM usuarios WHERE rol = 'alumno'`); 
-    res.json(result.rows); 
+    const result = await pool.query(`SELECT id, usuario FROM usuarios WHERE rol = 'alumno'`); res.json(result.rows); 
 });
 
 app.post('/asignar', async (req, res) => {
@@ -133,7 +128,7 @@ app.post('/asignar', async (req, res) => {
         if (check.rows.length > 0) return res.status(400).json({ error: "El alumno ya tiene este simulador." });
         await pool.query(`INSERT INTO asignaciones (usuario_id, cuestionario_id) VALUES ($1, $2)`, [usuario_id, cuestionario_id]);
         res.json({ mensaje: "¡Acceso otorgado!" });
-    } catch(err) { res.status(500).json({ error: "Error al asignar." }); }
+    } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
 app.get('/preguntas-admin/:cuestionario_id', async (req, res) => {
@@ -143,49 +138,42 @@ app.get('/preguntas-admin/:cuestionario_id', async (req, res) => {
 });
 
 app.delete('/eliminar-pregunta/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-        await pool.query(`DELETE FROM opciones WHERE pregunta_id = $1`, [id]);
-        await pool.query(`DELETE FROM preguntas WHERE id = $1`, [id]);
-        res.json({ mensaje: "¡Pregunta eliminada!" });
-    } catch(err) { res.status(500).json({ error: "Error al borrar." }); }
+    try { await pool.query(`DELETE FROM opciones WHERE pregunta_id = $1`, [req.params.id]); await pool.query(`DELETE FROM preguntas WHERE id = $1`, [req.params.id]); res.json({ mensaje: "Eliminada" }); } 
+    catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
 app.get('/reportes', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT r.id, u.usuario, c.titulo, r.aciertos, r.total_preguntas, r.fecha
-            FROM resultados r JOIN usuarios u ON r.usuario_id = u.id JOIN cuestionarios c ON r.cuestionario_id = c.id
+            SELECT r.id, u.usuario, COALESCE(c.titulo, 'Simulador de Repaso (Errores)') as titulo, r.aciertos, r.total_preguntas, r.fecha
+            FROM resultados r JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN cuestionarios c ON r.cuestionario_id = c.id
             ORDER BY r.fecha DESC
         `);
         res.json(result.rows);
-    } catch(err) { res.status(500).json({ error: "Error al cargar reportes." }); }
+    } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
 app.get('/mis-cuestionarios/:usuario_id', async (req, res) => {
-    const { usuario_id } = req.params;
     const result = await pool.query(`
         SELECT c.id, c.titulo, cat.nombre as categoria_nombre, cat.color as categoria_color
-        FROM cuestionarios c 
-        JOIN asignaciones a ON c.id = a.cuestionario_id 
-        LEFT JOIN categorias cat ON c.categoria_id = cat.id
+        FROM cuestionarios c JOIN asignaciones a ON c.id = a.cuestionario_id LEFT JOIN categorias cat ON c.categoria_id = cat.id
         WHERE a.usuario_id = $1
-    `, [usuario_id]);
+    `, [req.params.usuario_id]);
     res.json(result.rows);
 });
 
-// ACTUALIZADO: Ahora mandamos también el nombre de la categoría en el historial
 app.get('/mi-historial/:usuario_id', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT r.id, c.titulo, cat.nombre as categoria_nombre, cat.color as categoria_color, r.aciertos, r.total_preguntas, r.fecha
-            FROM resultados r 
-            JOIN cuestionarios c ON r.cuestionario_id = c.id
-            LEFT JOIN categorias cat ON c.categoria_id = cat.id
+            SELECT r.id, COALESCE(c.titulo, 'Simulador de Repaso') as titulo, 
+                   COALESCE(cat.nombre, 'Zona de Refuerzo') as categoria_nombre, 
+                   COALESCE(cat.color, '#ef4444') as categoria_color, 
+                   r.aciertos, r.total_preguntas, r.fecha, r.es_repaso
+            FROM resultados r LEFT JOIN cuestionarios c ON r.cuestionario_id = c.id LEFT JOIN categorias cat ON c.categoria_id = cat.id
             WHERE r.usuario_id = $1 ORDER BY r.fecha DESC
         `, [req.params.usuario_id]);
         res.json(result.rows);
-    } catch(err) { res.status(500).json({ error: "Error al cargar historial." }); }
+    } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
 app.get('/detalle-intento/:resultado_id', async (req, res) => {
@@ -196,32 +184,82 @@ app.get('/detalle-intento/:resultado_id', async (req, res) => {
             WHERE dr.resultado_id = $1 ORDER BY p.id ASC
         `, [req.params.resultado_id]);
         res.json(result.rows);
-    } catch(err) { res.status(500).json({ error: "Error al cargar detalle." }); }
+    } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
 app.get('/examen/:cuestionario_id', async (req, res) => {
-    const { cuestionario_id } = req.params;
     try {
-        const resPreguntas = await pool.query(`SELECT * FROM preguntas WHERE cuestionario_id = $1`, [cuestionario_id]);
+        const resPreguntas = await pool.query(`SELECT * FROM preguntas WHERE cuestionario_id = $1`, [req.params.cuestionario_id]);
         const preguntas = resPreguntas.rows;
         if (preguntas.length === 0) return res.json([]);
         const preguntaIds = preguntas.map(p => p.id);
         const resOpciones = await pool.query(`SELECT * FROM opciones WHERE pregunta_id = ANY($1::int[])`, [preguntaIds]);
         const opciones = resOpciones.rows;
-        const examenCompleto = preguntas.map(p => {
-            return {
-                id: p.id, texto: p.texto_pregunta,
-                opciones: opciones.filter(o => o.pregunta_id === p.id).map(o => ({ id: o.id, texto: o.texto_opcion, es_correcta: o.es_correcta }))
-            };
-        });
+        const examenCompleto = preguntas.map(p => ({ id: p.id, texto: p.texto_pregunta, opciones: opciones.filter(o => o.pregunta_id === p.id).map(o => ({ id: o.id, texto: o.texto_opcion, es_correcta: o.es_correcta })) }));
         res.json(examenCompleto);
-    } catch(err) { res.status(500).json({ error: "Error al descargar examen." }); }
+    } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
-app.post('/guardar-resultado', async (req, res) => {
-    const { usuario_id, cuestionario_id, aciertos, total, respuestas } = req.body;
+// ==========================================
+// MOTOR INTELIGENTE DE ERRORES (REPASO)
+// ==========================================
+app.get('/errores-alumno/:usuario_id', async (req, res) => {
     try {
-        const result = await pool.query(`INSERT INTO resultados (usuario_id, cuestionario_id, aciertos, total_preguntas) VALUES ($1, $2, $3, $4) RETURNING id`, [usuario_id, cuestionario_id, aciertos, total]);
+        // Busca preguntas falladas que NO hayan sido contestadas correctamente después
+        const result = await pool.query(`
+            SELECT DISTINCT p.id, p.texto_pregunta, COALESCE(c.titulo, 'Sin Módulo') as modulo_origen
+            FROM detalles_resultado dr
+            JOIN resultados r ON dr.resultado_id = r.id
+            JOIN preguntas p ON dr.pregunta_id = p.id
+            LEFT JOIN cuestionarios c ON p.cuestionario_id = c.id
+            LEFT JOIN opciones o ON dr.opcion_seleccionada_id = o.id
+            WHERE r.usuario_id = $1 AND (o.es_correcta = 0 OR o.id IS NULL)
+            AND p.id NOT IN (
+                SELECT dr2.pregunta_id 
+                FROM detalles_resultado dr2 JOIN resultados r2 ON dr2.resultado_id = r2.id JOIN opciones o2 ON dr2.opcion_seleccionada_id = o2.id 
+                WHERE r2.usuario_id = $1 AND o2.es_correcta = 1
+            )
+        `, [req.params.usuario_id]);
+        res.json(result.rows);
+    } catch(e) { res.status(500).json({error: "Error"}); }
+});
+
+app.get('/examen-repaso/:usuario_id', async (req, res) => {
+    try {
+        const resErrores = await pool.query(`
+            SELECT DISTINCT p.id, p.texto_pregunta
+            FROM detalles_resultado dr JOIN resultados r ON dr.resultado_id = r.id JOIN preguntas p ON dr.pregunta_id = p.id LEFT JOIN opciones o ON dr.opcion_seleccionada_id = o.id
+            WHERE r.usuario_id = $1 AND (o.es_correcta = 0 OR o.id IS NULL)
+            AND p.id NOT IN (
+                SELECT dr2.pregunta_id FROM detalles_resultado dr2 JOIN resultados r2 ON dr2.resultado_id = r2.id JOIN opciones o2 ON dr2.opcion_seleccionada_id = o2.id 
+                WHERE r2.usuario_id = $1 AND o2.es_correcta = 1
+            )
+        `, [req.params.usuario_id]);
+        
+        let preguntas = resErrores.rows;
+        if (preguntas.length === 0) return res.json([]);
+        
+        // El sistema arma un bloque de máximo 15 preguntas al azar
+        preguntas = preguntas.sort(() => 0.5 - Math.random()).slice(0, 15);
+        const preguntaIds = preguntas.map(p => p.id);
+        
+        const resOpciones = await pool.query(`SELECT * FROM opciones WHERE pregunta_id = ANY($1::int[])`, [preguntaIds]);
+        const opciones = resOpciones.rows;
+        
+        const examenCompleto = preguntas.map(p => ({
+            id: p.id, texto: p.texto_pregunta,
+            opciones: opciones.filter(o => o.pregunta_id === p.id).map(o => ({ id: o.id, texto: o.texto_opcion, es_correcta: o.es_correcta }))
+        }));
+        res.json(examenCompleto);
+    } catch(e) { res.status(500).json({error: "Error"}); }
+});
+
+// ACTUALIZADO: Guardar resultado acepta "es_repaso"
+app.post('/guardar-resultado', async (req, res) => {
+    const { usuario_id, cuestionario_id, aciertos, total, respuestas, es_repaso } = req.body;
+    try {
+        const c_id = es_repaso ? null : cuestionario_id;
+        const result = await pool.query(`INSERT INTO resultados (usuario_id, cuestionario_id, aciertos, total_preguntas, es_repaso) VALUES ($1, $2, $3, $4, $5) RETURNING id`, [usuario_id, c_id, aciertos, total, es_repaso ? true : false]);
         const resultado_id = result.rows[0].id;
         for (const preguntaId in respuestas) {
             const opcionId = respuestas[preguntaId];
