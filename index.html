@@ -79,11 +79,14 @@
             </div>
             
             <div class="bg-gray-50 p-4 rounded-lg mb-4 border border-slate-300 text-left">
-                <h3 class="font-bold text-slate-700 mb-2">3. Asignar Categoría a Módulos</h3>
+                <h3 class="font-bold text-slate-700 mb-2">3. Configurar Módulos (Editar / Eliminar)</h3>
                 <select id="lista-cuestionarios-editar-datos" class="w-full px-3 py-2 border rounded-lg mb-2 bg-white" onchange="cargarDatosEdicionRapida()"></select>
                 <input type="text" id="editar-solo-titulo" class="w-full px-3 py-2 border rounded-lg mb-2" placeholder="Nombre del módulo">
                 <select id="select-categoria-editar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
-                <button onclick="guardarEdicionCuestionario()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg hover:bg-slate-700">Actualizar</button>
+                <div class="flex gap-2">
+                    <button onclick="guardarEdicionCuestionario()" class="w-2/3 bg-slate-800 text-white font-bold py-2 rounded-lg hover:bg-slate-700">Actualizar Datos</button>
+                    <button onclick="eliminarCuestionario()" class="w-1/3 bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700">🗑️ Borrar</button>
+                </div>
             </div>
             
             <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
@@ -141,15 +144,21 @@
             <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2" id="titulo-cuestionario-activo">Cuestionario</h2>
             <h3 class="font-bold text-sm text-gray-600 mb-2">Preguntas en este simulador:</h3>
             <div id="contenedor-preguntas-existentes" class="mb-6 max-h-40 overflow-y-auto space-y-2 border-b pb-4 bg-gray-50 p-2 rounded"></div>
-            <h3 class="font-bold text-emerald-700 mb-2 mt-4">Añadir Nueva Pregunta:</h3>
+            
+            <h3 class="font-bold text-emerald-700 mb-2 mt-4" id="titulo-formulario-pregunta">➕ Añadir Nueva Pregunta:</h3>
             <div class="mb-4"><textarea id="texto-pregunta" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500" rows="3" placeholder="¿Cuál es la pregunta?"></textarea></div>
             <p class="text-sm font-bold text-gray-700 mb-2">Opciones (marca la correcta 🔘):</p>
             <div class="flex items-center mb-2"><input type="radio" name="opcion_correcta" value="0" class="w-5 h-5 mr-2 text-emerald-600" checked><input type="text" id="opcion-0" class="w-full px-3 py-1 border rounded-lg"></div>
             <div class="flex items-center mb-2"><input type="radio" name="opcion_correcta" value="1" class="w-5 h-5 mr-2 text-emerald-600"><input type="text" id="opcion-1" class="w-full px-3 py-1 border rounded-lg"></div>
             <div class="flex items-center mb-2"><input type="radio" name="opcion_correcta" value="2" class="w-5 h-5 mr-2 text-emerald-600"><input type="text" id="opcion-2" class="w-full px-3 py-1 border rounded-lg"></div>
             <div class="flex items-center mb-4"><input type="radio" name="opcion_correcta" value="3" class="w-5 h-5 mr-2 text-emerald-600"><input type="text" id="opcion-3" class="w-full px-3 py-1 border rounded-lg"></div>
-            <button onclick="guardarPregunta()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg mb-2 hover:bg-emerald-700">Guardar Pregunta</button>
-            <button onclick="cambiarVista('vista-admin')" class="w-full bg-gray-400 text-white font-bold py-2 rounded-lg hover:bg-gray-500">Terminar y Volver</button>
+            
+            <button id="btn-guardar-pregunta" onclick="guardarPregunta()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg mb-2 hover:bg-emerald-700">Guardar Pregunta</button>
+            <div class="flex gap-2">
+                <button id="btn-actualizar-pregunta" onclick="actualizarPregunta()" class="hidden w-2/3 bg-blue-600 text-white font-bold py-2 rounded-lg mb-2 hover:bg-blue-700">Guardar Cambios</button>
+                <button id="btn-cancelar-edicion" onclick="cancelarEdicionPregunta()" class="hidden w-1/3 bg-gray-500 text-white font-bold py-2 rounded-lg mb-2 hover:bg-gray-600">Cancelar</button>
+            </div>
+            <button onclick="cambiarVista('vista-admin')" class="w-full bg-gray-800 text-white font-bold py-2 rounded-lg hover:bg-gray-900 mt-2">Terminar y Volver</button>
         </div>
 
         <div id="vista-hacer-examen" class="hidden text-left py-2">
@@ -200,6 +209,10 @@
         const PREGUNTAS_POR_PAGINA = 10;
 
         let listaGlobalCategorias = []; let listaGlobalCuestionarios = []; let misCuestionariosGlobal = []; let miHistorialGlobal = []; let misErroresGlobal = [];
+        
+        // Variables para la edición de preguntas
+        let preguntaEditandoId = null;
+        let opcionesEditandoIds = [];
 
         function cambiarVista(vistaDestino) {
             const vistas = ['vista-login', 'vista-registro', 'vista-password', 'vista-dashboard', 'vista-admin', 'vista-editor', 'vista-hacer-examen', 'vista-resultados', 'vista-historial-detalle'];
@@ -294,10 +307,28 @@
             if(res.ok) { Swal.fire({ title: 'Actualizado', icon: 'success', timer: 1000, showConfirmButton: false }); cargarCuestionariosEnSelect(); }
         }
 
+        async function eliminarCuestionario() {
+            const id = document.getElementById('lista-cuestionarios-editar-datos').value;
+            if(!id) return Swal.fire('Ojo','Primero selecciona un cuestionario.','warning');
+            
+            const { value: passwordAdmin } = await Swal.fire({
+                title: 'Eliminar Cuestionario', text: 'Se borrará el cuestionario, todas sus preguntas y los resultados de los alumnos relacionados. Ingresa tu contraseña de administrador:',
+                input: 'password', inputPlaceholder: 'Tu contraseña', showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'Sí, eliminar'
+            });
+
+            if (passwordAdmin) {
+                const res = await fetch('/eliminar-cuestionario', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({admin_id: usuarioActualId, admin_password: passwordAdmin, cuestionario_id: id}) });
+                const data = await res.json();
+                if(res.ok) { Swal.fire('¡Eliminado!', data.mensaje, 'success'); cargarCuestionariosEnSelect(); document.getElementById('editar-solo-titulo').value = ''; } 
+                else { Swal.fire('Error', data.error, 'error'); }
+            }
+        }
+
         function abrirEditorPreguntas() {
             const s = document.getElementById('lista-cuestionarios-preguntas'); const id = s.value;
             if(!id) return;
             cuestionarioActualId = id; document.getElementById('titulo-cuestionario-activo').innerText = `Gestor: ${s.options[s.selectedIndex].text}`;
+            cancelarEdicionPregunta(); // Resetea el formulario por si acaso
             cargarPreguntasExistentes(); cambiarVista('vista-editor');
         }
 
@@ -305,7 +336,18 @@
             const res = await fetch(`/preguntas-admin/${cuestionarioActualId}`); const preguntas = await res.json();
             const contenedor = document.getElementById('contenedor-preguntas-existentes'); contenedor.innerHTML = '';
             if (preguntas.length === 0) { contenedor.innerHTML = '<p class="text-sm text-gray-500 italic p-2">No hay preguntas.</p>'; } 
-            else { preguntas.forEach((p, i) => { contenedor.innerHTML += `<div class="flex justify-between items-center bg-white p-2 border rounded shadow-sm text-sm"><span class="truncate pr-2 font-medium text-gray-700">${i + 1}. ${p.texto_pregunta}</span><button onclick="borrarPregunta(${p.id})" class="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-bold px-2 py-1 rounded transition">Borrar</button></div>`; }); }
+            else { 
+                preguntas.forEach((p, i) => { 
+                    contenedor.innerHTML += `
+                    <div class="flex justify-between items-center bg-white p-2 border rounded shadow-sm text-sm mb-1">
+                        <span class="truncate pr-2 font-medium text-gray-700">${i + 1}. ${p.texto_pregunta}</span>
+                        <div class="flex gap-1 shrink-0">
+                            <button onclick="cargarPreguntaParaEditar(${p.id})" class="text-blue-500 hover:text-white border border-blue-500 hover:bg-blue-500 font-bold px-2 py-1 rounded transition">Editar</button>
+                            <button onclick="borrarPregunta(${p.id})" class="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-bold px-2 py-1 rounded transition">Borrar</button>
+                        </div>
+                    </div>`; 
+                }); 
+            }
         }
 
         async function borrarPregunta(idPregunta) {
@@ -321,7 +363,44 @@
             if(!tp || !op0 || !op1 || !op2 || !op3) return Swal.fire('Error','Llena todo.','error');
             const opciones = [ {texto:op0, es_correcta:ci==0?1:0}, {texto:op1, es_correcta:ci==1?1:0}, {texto:op2, es_correcta:ci==2?1:0}, {texto:op3, es_correcta:ci==3?1:0} ];
             const res = await fetch('/agregar-pregunta', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cuestionario_id:cuestionarioActualId, texto_pregunta:tp, opciones}) });
-            if(res.ok){ document.getElementById('texto-pregunta').value=''; document.getElementById('opcion-0').value=''; document.getElementById('opcion-1').value=''; document.getElementById('opcion-2').value=''; document.getElementById('opcion-3').value=''; document.querySelector('input[name="opcion_correcta"][value="0"]').checked=true; cargarPreguntasExistentes(); }
+            if(res.ok){ Swal.fire({title:'¡Guardada!', icon:'success', timer:1000, showConfirmButton:false}); cancelarEdicionPregunta(); cargarPreguntasExistentes(); }
+        }
+
+        async function cargarPreguntaParaEditar(id) {
+            const res = await fetch(`/pregunta/${id}`);
+            const data = await res.json();
+            preguntaEditandoId = data.pregunta.id;
+            document.getElementById('texto-pregunta').value = data.pregunta.texto_pregunta;
+            opcionesEditandoIds = [];
+            data.opciones.forEach((op, index) => {
+                if (index < 4) { 
+                    document.getElementById(`opcion-${index}`).value = op.texto_opcion;
+                    opcionesEditandoIds.push(op.id);
+                    if (op.es_correcta === 1) document.querySelector(`input[name="opcion_correcta"][value="${index}"]`).checked = true;
+                }
+            });
+            document.getElementById('btn-guardar-pregunta').classList.add('hidden'); document.getElementById('btn-actualizar-pregunta').classList.remove('hidden'); document.getElementById('btn-cancelar-edicion').classList.remove('hidden');
+            document.getElementById('titulo-formulario-pregunta').innerText = "✏️ Editando Pregunta:"; document.getElementById('texto-pregunta').focus();
+        }
+
+        async function actualizarPregunta() {
+            const tp = document.getElementById('texto-pregunta').value; const ci = document.querySelector('input[name="opcion_correcta"]:checked').value;
+            const op0 = document.getElementById('opcion-0').value; const op1 = document.getElementById('opcion-1').value; const op2 = document.getElementById('opcion-2').value; const op3 = document.getElementById('opcion-3').value;
+            if(!tp || !op0 || !op1 || !op2 || !op3) return Swal.fire('Error','Llena todo.','error');
+            const opciones = [ 
+                {id: opcionesEditandoIds[0], texto: op0, es_correcta: ci==0?1:0}, {id: opcionesEditandoIds[1], texto: op1, es_correcta: ci==1?1:0},
+                {id: opcionesEditandoIds[2], texto: op2, es_correcta: ci==2?1:0}, {id: opcionesEditandoIds[3], texto: op3, es_correcta: ci==3?1:0}
+            ];
+            const res = await fetch(`/editar-pregunta/${preguntaEditandoId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({texto_pregunta:tp, opciones}) });
+            if(res.ok) { Swal.fire({title:'¡Actualizada!', icon:'success', timer:1000, showConfirmButton:false}); cancelarEdicionPregunta(); cargarPreguntasExistentes(); }
+        }
+
+        function cancelarEdicionPregunta() {
+            preguntaEditandoId = null; opcionesEditandoIds = []; document.getElementById('texto-pregunta').value = '';
+            for(let i=0; i<4; i++) document.getElementById(`opcion-${i}`).value = '';
+            document.querySelector(`input[name="opcion_correcta"][value="0"]`).checked = true;
+            document.getElementById('btn-guardar-pregunta').classList.remove('hidden'); document.getElementById('btn-actualizar-pregunta').classList.add('hidden'); document.getElementById('btn-cancelar-edicion').classList.add('hidden');
+            document.getElementById('titulo-formulario-pregunta').innerText = "➕ Añadir Nueva Pregunta:";
         }
 
         async function cargarAlumnosEnSelect() { 
@@ -353,8 +432,7 @@
                 let tablaHTML = `
                 <div class="mb-3 border border-gray-300 rounded-lg overflow-hidden shadow-sm">
                     <button onclick="toggleAcordeon('acc-${usuario}')" class="w-full bg-slate-200 px-4 py-3 text-left font-bold text-slate-800 hover:bg-slate-300 flex justify-between items-center transition">
-                        <span>👤 ${usuario} <span class="text-xs bg-slate-600 text-white px-2 py-1 rounded ml-2">${exams.length} intentos</span></span>
-                        <span>▼</span>
+                        <span>👤 ${usuario} <span class="text-xs bg-slate-600 text-white px-2 py-1 rounded ml-2">${exams.length} intentos</span></span><span>▼</span>
                     </button>
                     <div id="acc-${usuario}" class="hidden bg-white">
                         <table class="w-full text-sm text-left text-gray-600">
@@ -387,8 +465,7 @@
                 });
 
                 for (const key in agrupados) {
-                    const g = agrupados[key];
-                    const tituloGrupo = g.esSim ? `🎓 SIMULACIÓN: ${g.nombreCat}` : `📁 MÓDULOS: ${g.nombreCat}`;
+                    const g = agrupados[key]; const tituloGrupo = g.esSim ? `🎓 SIMULACIÓN: ${g.nombreCat}` : `📁 MÓDULOS: ${g.nombreCat}`;
                     contenedor.innerHTML += `<h4 class="font-bold text-red-700 mt-4 border-b border-red-200">${tituloGrupo} (${g.preguntas.length} errores)</h4>`;
                     g.preguntas.forEach((p, i) => { contenedor.innerHTML += `<div class="py-2 border-b border-gray-100"><p class="text-xs text-slate-500 font-bold uppercase">${p.modulo_origen}</p><p class="text-sm text-gray-800">${i+1}. ${p.texto_pregunta}</p></div>`; });
                 }
@@ -396,9 +473,6 @@
             contenedor.classList.remove('hidden');
         }
 
-        // ========================================================
-        // NUEVAS FUNCIONES: GESTIÓN DE USUARIOS Y RESET
-        // ========================================================
         async function cambiarPasswordUsuario() {
             const ui = document.getElementById('lista-usuarios-gestion').value;
             if(!ui) return Swal.fire('Ojo','Selecciona un usuario.','warning');
@@ -430,8 +504,7 @@
 
             if (passwordAdmin) {
                 const res = await fetch('/reset-historial', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({admin_id: usuarioActualId, admin_password: passwordAdmin, usuario_id: ui, categoria_id: ci})
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({admin_id: usuarioActualId, admin_password: passwordAdmin, usuario_id: ui, categoria_id: ci})
                 });
                 const data = await res.json();
                 if(res.ok) { Swal.fire('¡Eliminado!', data.mensaje, 'success'); verReportes(); } 
@@ -439,13 +512,8 @@
             }
         }
 
-        function mezclarArreglo(arreglo) {
-            for (let i = arreglo.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]]; }
-            return arreglo;
-        }
-
         // ========================================================
-        // INTERFAZ DEL ALUMNO CON CONTEO DE INTENTOS
+        // INTERFAZ DEL ALUMNO Y EXÁMENES PAGINADOS
         // ========================================================
         async function cargarMisExamenes() {
             detenerReloj(); 
@@ -485,7 +553,6 @@
             const nombreCat = decodeURIComponent(nombreSeguro); const contenedor = document.getElementById('contenedor-mis-examenes'); const idCat = idCatRaw === 'null' ? null : idCatRaw;
             contenedor.innerHTML = `<button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver a Categorías</button>`;
             
-            // Calculamos intentos de Simulación Final buscando en el Historial Global
             const nombreBusqueda = nombreCat === 'Módulo General' ? '🎓 SIMULACIÓN FINAL' : `🎓 Simulación Final: ${nombreCat}`;
             const intentosSim = miHistorialGlobal.filter(h => h.es_simulacion === true && (h.categoria_nombre === nombreBusqueda || h.categoria_nombre === nombreCat)).length;
             const badgeSimHTML = intentosSim > 0 ? `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-green-100 text-green-700 border border-green-200">✅ Realizado: ${intentosSim} vez/veces</span>` : `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-yellow-100 text-yellow-700 border border-yellow-200">⏳ Sin intentar</span>`;
@@ -525,20 +592,12 @@
             const examenes = misCuestionariosGlobal.filter(c => (c.categoria_nombre || 'Módulo General') === nombreCat);
             examenes.forEach(c => {
                 const tituloSeguro = encodeURIComponent(c.titulo); const colorHex = c.categoria_color || '#64748b';
-                
-                // NUEVA ETIQUETA DE INTENTOS
                 const intentosNum = parseInt(c.cantidad_intentos) || 0;
-                const badgeHTML = intentosNum > 0 
-                    ? `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-green-100 text-green-700 border border-green-200">✅ Realizado: ${intentosNum} vez/veces</span>` 
-                    : `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-gray-100 text-gray-500 border border-gray-200">⏳ Sin intentar</span>`;
+                const badgeHTML = intentosNum > 0 ? `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-green-100 text-green-700 border border-green-200">✅ Realizado: ${intentosNum} vez/veces</span>` : `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-gray-100 text-gray-500 border border-gray-200">⏳ Sin intentar</span>`;
 
                 contenedor.innerHTML += `
                     <button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" class="w-full bg-white py-3 px-4 mb-3 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border" style="border-left-width: 6px; border-left-color: ${colorHex};">
-                        <div>
-                            <p class="font-bold text-gray-800">📝 ${c.titulo}</p>
-                            ${badgeHTML}
-                        </div>
-                        <span style="color: ${colorHex}; opacity: 0.8; font-size: 1.5rem;">▶</span>
+                        <div><p class="font-bold text-gray-800">📝 ${c.titulo}</p>${badgeHTML}</div><span style="color: ${colorHex}; opacity: 0.8; font-size: 1.5rem;">▶</span>
                     </button>`; 
             });
         }
@@ -601,6 +660,11 @@
 
             examenActivo = mezclarArreglo(examenActivo); examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
             iniciarReloj(); renderizarExamenPaginado();
+        }
+
+        function mezclarArreglo(arreglo) {
+            for (let i = arreglo.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]]; }
+            return arreglo;
         }
 
         function renderizarExamenPaginado() {
