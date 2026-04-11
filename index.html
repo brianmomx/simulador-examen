@@ -60,7 +60,8 @@
         </div>
 
         <div id="vista-admin" class="hidden text-center py-4">
-            <h2 class="text-2xl font-bold mb-4">Panel de Administración</h2>
+            <h2 class="text-2xl font-bold mb-6">Panel de Administración</h2>
+            
             <div class="bg-indigo-50 p-4 rounded-lg mb-4 border border-indigo-200 text-left">
                 <h3 class="font-bold text-indigo-800 mb-2">1. Crear Nueva Categoría (Materia)</h3>
                 <div class="flex items-center gap-2 mb-3">
@@ -69,12 +70,14 @@
                 </div>
                 <button onclick="crearCategoria()" class="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700">Guardar Categoría</button>
             </div>
+            
             <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
                 <h3 class="font-bold text-slate-700 mb-2">2. Crear Nuevo Cuestionario</h3>
                 <input type="text" id="nuevo-cuestionario-titulo" class="w-full px-3 py-2 border rounded-lg mb-2" placeholder="Nombre del módulo">
                 <select id="select-categoria-nuevo" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
                 <button onclick="crearCuestionario()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">Crear Cuestionario</button>
             </div>
+            
             <div class="bg-gray-50 p-4 rounded-lg mb-4 border border-slate-300 text-left">
                 <h3 class="font-bold text-slate-700 mb-2">3. Asignar Categoría a Módulos</h3>
                 <select id="lista-cuestionarios-editar-datos" class="w-full px-3 py-2 border rounded-lg mb-2 bg-white" onchange="cargarDatosEdicionRapida()"></select>
@@ -82,36 +85,56 @@
                 <select id="select-categoria-editar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
                 <button onclick="guardarEdicionCuestionario()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg hover:bg-slate-700">Actualizar</button>
             </div>
+            
             <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
                 <h3 class="font-bold text-emerald-700 mb-2">4. Gestionar Preguntas</h3>
                 <select id="lista-cuestionarios-preguntas" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
                 <button onclick="abrirEditorPreguntas()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700">Abrir Gestor</button>
             </div>
+            
             <div class="bg-gray-50 p-4 rounded-lg mb-6 border text-left border-purple-200">
                 <h3 class="font-bold text-purple-700 mb-2">5. Habilitar Acceso</h3>
                 <select id="lista-alumnos-asignar" class="w-full px-3 py-2 border rounded-lg mb-2 bg-white"></select>
                 <select id="lista-cuestionarios-asignar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
                 <button onclick="asignarCuestionario()" class="w-full bg-purple-600 text-white font-bold py-2 rounded-lg hover:bg-purple-700">Otorgar Acceso</button>
             </div>
+
             <div class="bg-gray-50 p-4 rounded-lg mb-6 border text-left border-orange-200">
-                <h3 class="font-bold text-orange-700 mb-2">6. Reportes Globales</h3>
-                <button onclick="verReportes()" class="w-full bg-orange-500 text-white font-bold py-2 rounded-lg mb-3 hover:bg-orange-600">Ver Historial</button>
-                <div id="tabla-reportes-container" class="hidden overflow-x-auto">
-                    <table class="w-full text-sm text-left text-gray-600 border">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-200">
-                            <tr><th class="px-3 py-2 border">Alumno</th><th class="px-3 py-2 border">Examen</th><th class="px-3 py-2 border text-center">Aciertos</th><th class="px-3 py-2 border text-center">Calificación</th><th class="px-3 py-2 border">Fecha</th></tr>
-                        </thead>
-                        <tbody id="cuerpo-tabla-reportes" class="bg-white"></tbody>
-                    </table>
+                <h3 class="font-bold text-orange-700 mb-2">6. Reportes Globales (Historial)</h3>
+                <p class="text-xs text-gray-600 mb-3">Expande el nombre del alumno para ver sus calificaciones.</p>
+                <button onclick="verReportes()" class="w-full bg-orange-500 text-white font-bold py-2 rounded-lg mb-3 hover:bg-orange-600">Cargar y Actualizar Reportes</button>
+                <div id="tabla-reportes-container" class="hidden">
+                    <div id="contenedor-reportes-agrupados" class="space-y-2"></div>
                 </div>
             </div>
+
             <div class="bg-red-50 p-4 rounded-lg mb-6 border text-left border-red-200">
                 <h3 class="font-bold text-red-700 mb-2">7. Análisis de Errores por Alumno</h3>
                 <select id="lista-alumnos-errores" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
                 <button onclick="verErroresAdmin()" class="w-full bg-red-600 text-white font-bold py-2 rounded-lg mb-3 hover:bg-red-700">Ver Preguntas Falladas</button>
                 <div id="contenedor-errores-admin" class="hidden max-h-80 overflow-y-auto space-y-4 bg-white p-3 border rounded"></div>
             </div>
-            <button onclick="cerrarSesion()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg hover:bg-slate-900">Cerrar Sesión</button>
+
+            <div class="bg-teal-50 p-4 rounded-lg mb-6 border text-left border-teal-200">
+                <h3 class="font-bold text-teal-800 mb-2">8. Gestión de Cuentas de Usuario</h3>
+                <select id="lista-usuarios-gestion" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
+                <div class="flex gap-2">
+                    <button onclick="cambiarPasswordUsuario()" class="w-1/2 bg-teal-600 text-white font-bold py-2 rounded-lg hover:bg-teal-700 text-sm">Cambiar Password</button>
+                    <button onclick="eliminarUsuario()" class="w-1/2 bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700 text-sm">Eliminar Cuenta</button>
+                </div>
+            </div>
+
+            <div class="bg-rose-50 p-4 rounded-lg mb-6 border text-left border-rose-300 shadow-sm">
+                <h3 class="font-bold text-rose-800 mb-2">9. Resetear Historial de Alumno</h3>
+                <p class="text-xs text-rose-600 mb-3">Borra los intentos previos de un alumno. Acción protegida con contraseña.</p>
+                <select id="lista-alumnos-reset" class="w-full px-3 py-2 border border-rose-300 rounded-lg mb-2 bg-white"></select>
+                <select id="lista-categorias-reset" class="w-full px-3 py-2 border border-rose-300 rounded-lg mb-3 bg-white">
+                    <option value="all">⚠️ TODAS LAS CATEGORÍAS (Reset Total)</option>
+                </select>
+                <button onclick="resetearHistorial()" class="w-full bg-rose-600 text-white font-bold py-2 rounded-lg hover:bg-rose-700">Ejecutar Reset</button>
+            </div>
+
+            <button onclick="cerrarSesion()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg hover:bg-slate-900 mt-4">Cerrar Sesión</button>
         </div>
 
         <div id="vista-editor" class="hidden py-2 text-left">
@@ -173,7 +196,6 @@
         
         let timerInterval;
         let tiempoRestante = 7200;
-        
         let paginaActual = 0;
         const PREGUNTAS_POR_PAGINA = 10;
 
@@ -185,6 +207,8 @@
             document.getElementById(vistaDestino).classList.remove('hidden');
             window.scrollTo(0, 0); 
         }
+
+        function toggleAcordeon(id) { const el = document.getElementById(id); el.classList.toggle('hidden'); }
 
         async function registrarUsuario() {
             const usuario = document.getElementById('reg-usuario').value; const correo = document.getElementById('reg-correo').value; const password = document.getElementById('reg-password').value;
@@ -221,25 +245,35 @@
         // GESTOR DE ADMIN
         // ========================================================
         async function cargarDatosAdmin() { await cargarCategorias(); await cargarCuestionariosEnSelect(); await cargarAlumnosEnSelect(); }
+        
         async function crearCategoria() {
             const nombre = document.getElementById('nueva-categoria-nombre').value; const color = document.getElementById('nueva-categoria-color').value;
             if(!nombre) return;
             const res = await fetch('/crear-categoria', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre, color }) });
             if(res.ok) { Swal.fire({ title: 'Creada', icon: 'success', timer: 1000, showConfirmButton: false }); document.getElementById('nueva-categoria-nombre').value = ''; await cargarCategorias(); } 
         }
+
         async function cargarCategorias() {
             const res = await fetch('/categorias'); listaGlobalCategorias = await res.json();
-            const sNuevo = document.getElementById('select-categoria-nuevo'); const sEditar = document.getElementById('select-categoria-editar');
+            const sNuevo = document.getElementById('select-categoria-nuevo'); const sEditar = document.getElementById('select-categoria-editar'); const sReset = document.getElementById('lista-categorias-reset');
+            
             let opcionesHTML = '<option value="">Sin categoría (Gris por defecto)</option>';
-            listaGlobalCategorias.forEach(cat => { opcionesHTML += `<option value="${cat.id}">${cat.nombre}</option>`; });
-            sNuevo.innerHTML = opcionesHTML; sEditar.innerHTML = opcionesHTML;
+            let opcionesResetHTML = '<option value="all">⚠️ TODAS LAS CATEGORÍAS (Reset Total)</option>';
+            
+            listaGlobalCategorias.forEach(cat => { 
+                opcionesHTML += `<option value="${cat.id}">${cat.nombre}</option>`; 
+                opcionesResetHTML += `<option value="${cat.id}">${cat.nombre}</option>`; 
+            });
+            sNuevo.innerHTML = opcionesHTML; sEditar.innerHTML = opcionesHTML; sReset.innerHTML = opcionesResetHTML;
         }
+
         async function crearCuestionario() {
             const titulo = document.getElementById('nuevo-cuestionario-titulo').value; const categoria_id = document.getElementById('select-categoria-nuevo').value;
             if(!titulo) return;
             const res = await fetch('/crear-cuestionario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo, categoria_id }) });
             if(res.ok){ Swal.fire({ title: 'Creado', icon: 'success', timer: 1000, showConfirmButton: false }); document.getElementById('nuevo-cuestionario-titulo').value=''; cargarCuestionariosEnSelect(); } 
         }
+
         async function cargarCuestionariosEnSelect() {
             const res = await fetch('/cuestionarios'); listaGlobalCuestionarios = await res.json();
             const sEditarDatos = document.getElementById('lista-cuestionarios-editar-datos'); const sPreguntas = document.getElementById('lista-cuestionarios-preguntas'); const sAsignar = document.getElementById('lista-cuestionarios-asignar');
@@ -249,36 +283,42 @@
                 sEditarDatos.innerHTML += `<option value="${c.id}">${optionText}</option>`; sPreguntas.innerHTML += `<option value="${c.id}">${optionText}</option>`; sAsignar.innerHTML += `<option value="${c.id}">${optionText}</option>`; 
             });
         }
+
         function cargarDatosEdicionRapida() {
             const id = document.getElementById('lista-cuestionarios-editar-datos').value;
             if(!id) { document.getElementById('editar-solo-titulo').value = ''; document.getElementById('select-categoria-editar').value = ''; return; }
             const cuestionario = listaGlobalCuestionarios.find(c => c.id == id);
             document.getElementById('editar-solo-titulo').value = cuestionario.titulo; document.getElementById('select-categoria-editar').value = cuestionario.categoria_id || '';
         }
+
         async function guardarEdicionCuestionario() {
             const id = document.getElementById('lista-cuestionarios-editar-datos').value; const titulo = document.getElementById('editar-solo-titulo').value; const categoria_id = document.getElementById('select-categoria-editar').value;
             if(!id || !titulo) return;
             const res = await fetch(`/editar-cuestionario/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo, categoria_id }) });
             if(res.ok) { Swal.fire({ title: 'Actualizado', icon: 'success', timer: 1000, showConfirmButton: false }); cargarCuestionariosEnSelect(); }
         }
+
         function abrirEditorPreguntas() {
             const s = document.getElementById('lista-cuestionarios-preguntas'); const id = s.value;
             if(!id) return;
             cuestionarioActualId = id; document.getElementById('titulo-cuestionario-activo').innerText = `Gestor: ${s.options[s.selectedIndex].text}`;
             cargarPreguntasExistentes(); cambiarVista('vista-editor');
         }
+
         async function cargarPreguntasExistentes() {
             const res = await fetch(`/preguntas-admin/${cuestionarioActualId}`); const preguntas = await res.json();
             const contenedor = document.getElementById('contenedor-preguntas-existentes'); contenedor.innerHTML = '';
             if (preguntas.length === 0) { contenedor.innerHTML = '<p class="text-sm text-gray-500 italic p-2">No hay preguntas.</p>'; } 
             else { preguntas.forEach((p, i) => { contenedor.innerHTML += `<div class="flex justify-between items-center bg-white p-2 border rounded shadow-sm text-sm"><span class="truncate pr-2 font-medium text-gray-700">${i + 1}. ${p.texto_pregunta}</span><button onclick="borrarPregunta(${p.id})" class="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-bold px-2 py-1 rounded transition">Borrar</button></div>`; }); }
         }
+
         async function borrarPregunta(idPregunta) {
             const confirmar = await Swal.fire({ title: '¿Borrar pregunta?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, borrar', cancelButtonText: 'Cancelar' });
             if (!confirmar.isConfirmed) return;
             const res = await fetch(`/eliminar-pregunta/${idPregunta}`, { method: 'DELETE' });
             if (res.ok) { cargarPreguntasExistentes(); }
         }
+
         async function guardarPregunta() {
             const tp = document.getElementById('texto-pregunta').value; const op0 = document.getElementById('opcion-0').value; const op1 = document.getElementById('opcion-1').value; const op2 = document.getElementById('opcion-2').value; const op3 = document.getElementById('opcion-3').value;
             const ci = document.querySelector('input[name="opcion_correcta"]:checked').value;
@@ -287,12 +327,14 @@
             const res = await fetch('/agregar-pregunta', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cuestionario_id:cuestionarioActualId, texto_pregunta:tp, opciones}) });
             if(res.ok){ document.getElementById('texto-pregunta').value=''; document.getElementById('opcion-0').value=''; document.getElementById('opcion-1').value=''; document.getElementById('opcion-2').value=''; document.getElementById('opcion-3').value=''; document.querySelector('input[name="opcion_correcta"][value="0"]').checked=true; cargarPreguntasExistentes(); }
         }
+
         async function cargarAlumnosEnSelect() { 
             const res = await fetch('/alumnos'); const alumnos = await res.json(); 
-            const s = document.getElementById('lista-alumnos-asignar'); const sErr = document.getElementById('lista-alumnos-errores'); 
-            s.innerHTML = '<option value="">Selecciona alumno...</option>'; sErr.innerHTML = '<option value="">Selecciona alumno...</option>'; 
-            alumnos.forEach(a => { s.innerHTML += `<option value="${a.id}">${a.usuario}</option>`; sErr.innerHTML += `<option value="${a.id}">${a.usuario}</option>`; }); 
+            const arr = [ 'lista-alumnos-asignar', 'lista-alumnos-errores', 'lista-usuarios-gestion', 'lista-alumnos-reset' ];
+            arr.forEach(id => { document.getElementById(id).innerHTML = '<option value="">Selecciona alumno...</option>'; });
+            alumnos.forEach(a => { arr.forEach(id => { document.getElementById(id).innerHTML += `<option value="${a.id}">${a.usuario}</option>`; }); }); 
         }
+
         async function asignarCuestionario() {
             const ui = document.getElementById('lista-alumnos-asignar').value; const ci = document.getElementById('lista-cuestionarios-asignar').value;
             if(!ui || !ci) return;
@@ -300,32 +342,53 @@
             const data = await res.json();
             if(res.ok){ Swal.fire({ title: 'Acceso otorgado', icon: 'success', timer: 1000, showConfirmButton: false }); } else { Swal.fire('Error', data.error, 'error'); } 
         }
+
+        // ==============================================
+        // NUEVAS FUNCIONES DE ADMIN (REPORTES COMPACTOS)
+        // ==============================================
         async function verReportes() {
             const res = await fetch('/reportes'); const reportes = await res.json();
-            const tbody = document.getElementById('cuerpo-tabla-reportes'); tbody.innerHTML = '';
-            if (reportes.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-gray-500 italic">No hay exámenes contestados.</td></tr>'; } 
-            else {
-                reportes.forEach(r => {
-                    const fechaObj = new Date(r.fecha.replace(' ', 'T') + 'Z'); const fechaBonita = fechaObj.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
-                    const calificacionDecimal = ((r.aciertos / r.total_preguntas) * 10).toFixed(1); 
-                    const colorNota = (r.aciertos / r.total_preguntas) >= 0.6 ? 'text-green-600' : 'text-red-500';
-                    tbody.innerHTML += `<tr class="border-b"><td class="px-3 py-3">${r.usuario}</td><td class="px-3 py-3 font-bold">${r.titulo}</td><td class="px-3 py-3 text-center">${r.aciertos}/${r.total_preguntas}</td><td class="px-3 py-3 text-center font-black ${colorNota}">${calificacionDecimal}</td><td class="px-3 py-3 text-xs text-gray-500">${fechaBonita}</td></tr>`;
-                });
-            }
+            const contenedor = document.getElementById('contenedor-reportes-agrupados'); contenedor.innerHTML = '';
             document.getElementById('tabla-reportes-container').classList.remove('hidden');
+
+            if (reportes.length === 0) { contenedor.innerHTML = '<p class="text-center text-gray-500 italic p-4">No hay exámenes contestados.</p>'; return; } 
+
+            const agrupados = {};
+            reportes.forEach(r => { if(!agrupados[r.usuario]) agrupados[r.usuario] = []; agrupados[r.usuario].push(r); });
+
+            for(const [usuario, exams] of Object.entries(agrupados)) {
+                let tablaHTML = `
+                <div class="mb-3 border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                    <button onclick="toggleAcordeon('acc-${usuario}')" class="w-full bg-slate-200 px-4 py-3 text-left font-bold text-slate-800 hover:bg-slate-300 flex justify-between items-center transition">
+                        <span>👤 ${usuario} <span class="text-xs bg-slate-600 text-white px-2 py-1 rounded ml-2">${exams.length} intentos</span></span>
+                        <span>▼</span>
+                    </button>
+                    <div id="acc-${usuario}" class="hidden bg-white">
+                        <table class="w-full text-sm text-left text-gray-600">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr><th class="px-3 py-2 border-b border-r">Examen</th><th class="px-3 py-2 border-b border-r text-center">Aciertos</th><th class="px-3 py-2 border-b border-r text-center">Nota</th><th class="px-3 py-2 border-b">Fecha</th></tr>
+                            </thead>
+                            <tbody>`;
+                exams.forEach(r => {
+                    const fechaObj = new Date(r.fecha.replace(' ', 'T') + 'Z'); const fechaBonita = fechaObj.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+                    const calificacionDecimal = ((r.aciertos / r.total_preguntas) * 10).toFixed(1); const colorNota = (r.aciertos / r.total_preguntas) >= 0.6 ? 'text-green-600' : 'text-red-500';
+                    tablaHTML += `<tr class="border-b hover:bg-gray-50"><td class="px-3 py-2 border-r font-medium">${r.titulo}</td><td class="px-3 py-2 border-r text-center">${r.aciertos}/${r.total_preguntas}</td><td class="px-3 py-2 border-r text-center font-black ${colorNota}">${calificacionDecimal}</td><td class="px-3 py-2 text-xs text-gray-500">${fechaBonita}</td></tr>`;
+                });
+                tablaHTML += `</tbody></table></div></div>`;
+                contenedor.innerHTML += tablaHTML;
+            }
         }
 
         async function verErroresAdmin() {
             const ui = document.getElementById('lista-alumnos-errores').value; if(!ui) return;
             const res = await fetch(`/errores-alumno/${ui}`); const errores = await res.json();
             const contenedor = document.getElementById('contenedor-errores-admin'); contenedor.innerHTML = '';
+            
             if(errores.length === 0) { contenedor.innerHTML = '<p class="text-green-600 font-bold text-sm">Este alumno no tiene preguntas falladas acumuladas.</p>'; } 
             else {
-                // Agrupar por categoría y simulación para el Admin
                 const agrupados = {};
                 errores.forEach(e => {
-                    const nombreCat = e.cat_nombre || 'Módulo General';
-                    const key = `${nombreCat}_${e.es_simulacion}`;
+                    const nombreCat = e.cat_nombre || 'Módulo General'; const key = `${nombreCat}_${e.es_simulacion}`;
                     if(!agrupados[key]) agrupados[key] = { nombreCat, esSim: e.es_simulacion, preguntas: [] };
                     agrupados[key].preguntas.push(e);
                 });
@@ -334,12 +397,53 @@
                     const g = agrupados[key];
                     const tituloGrupo = g.esSim ? `🎓 SIMULACIÓN: ${g.nombreCat}` : `📁 MÓDULOS: ${g.nombreCat}`;
                     contenedor.innerHTML += `<h4 class="font-bold text-red-700 mt-4 border-b border-red-200">${tituloGrupo} (${g.preguntas.length} errores)</h4>`;
-                    g.preguntas.forEach((p, i) => {
-                        contenedor.innerHTML += `<div class="py-2 border-b border-gray-100"><p class="text-xs text-slate-500 font-bold uppercase">${p.modulo_origen}</p><p class="text-sm text-gray-800">${i+1}. ${p.texto_pregunta}</p></div>`;
-                    });
+                    g.preguntas.forEach((p, i) => { contenedor.innerHTML += `<div class="py-2 border-b border-gray-100"><p class="text-xs text-slate-500 font-bold uppercase">${p.modulo_origen}</p><p class="text-sm text-gray-800">${i+1}. ${p.texto_pregunta}</p></div>`; });
                 }
             }
             contenedor.classList.remove('hidden');
+        }
+
+        // ========================================================
+        // NUEVAS FUNCIONES: GESTIÓN DE USUARIOS Y RESET
+        // ========================================================
+        async function cambiarPasswordUsuario() {
+            const ui = document.getElementById('lista-usuarios-gestion').value;
+            if(!ui) return Swal.fire('Ojo','Selecciona un usuario.','warning');
+            const { value: nuevaPass } = await Swal.fire({ title: 'Nueva Contraseña', input: 'text', inputPlaceholder: 'Escribe la contraseña', showCancelButton: true, confirmButtonText: 'Guardar' });
+            if (nuevaPass) {
+                const res = await fetch('/modificar-password-admin', { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({usuario_id: ui, nueva_password: nuevaPass}) });
+                if(res.ok) Swal.fire({title: 'Éxito', icon: 'success', timer:1000, showConfirmButton:false});
+            }
+        }
+
+        async function eliminarUsuario() {
+            const ui = document.getElementById('lista-usuarios-gestion').value;
+            if(!ui) return Swal.fire('Ojo','Selecciona un usuario.','warning');
+            const conf = await Swal.fire({ title: '¿Eliminar definitivamente?', text: "Se borrará todo su historial, acceso y cuenta.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sí, eliminar' });
+            if(conf.isConfirmed) {
+                const res = await fetch(`/eliminar-usuario/${ui}`, { method: 'DELETE' });
+                if(res.ok) { Swal.fire({title: 'Eliminado', icon: 'success', timer:1000, showConfirmButton:false}); cargarAlumnosEnSelect(); }
+            }
+        }
+
+        async function resetearHistorial() {
+            const ui = document.getElementById('lista-alumnos-reset').value; const ci = document.getElementById('lista-categorias-reset').value;
+            if(!ui) return Swal.fire('Ojo','Selecciona un alumno.','warning');
+            
+            const { value: passwordAdmin } = await Swal.fire({
+                title: 'Protección de Seguridad', text: 'Ingresa tu contraseña de administrador para confirmar el borrado del historial:',
+                input: 'password', inputPlaceholder: 'Tu contraseña', showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'Confirmar Borrado'
+            });
+
+            if (passwordAdmin) {
+                const res = await fetch('/reset-historial', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({admin_id: usuarioActualId, admin_password: passwordAdmin, usuario_id: ui, categoria_id: ci})
+                });
+                const data = await res.json();
+                if(res.ok) { Swal.fire('¡Eliminado!', data.mensaje, 'success'); verReportes(); } 
+                else { Swal.fire('Error', data.error, 'error'); }
+            }
         }
 
         function mezclarArreglo(arreglo) {
@@ -356,14 +460,12 @@
             const resHistorial = await fetch(`/mi-historial/${usuarioActualId}`); miHistorialGlobal = await resHistorial.json();
             const resErrores = await fetch(`/errores-alumno/${usuarioActualId}`); misErroresGlobal = await resErrores.json();
 
-            renderizarCategoriasExamenes();
-            renderizarCategoriasHistorial();
-            cambiarVista('vista-dashboard');
+            renderizarCategoriasExamenes(); renderizarCategoriasHistorial(); cambiarVista('vista-dashboard');
         }
 
         function renderizarCategoriasExamenes() {
             const contenedor = document.getElementById('contenedor-mis-examenes'); contenedor.innerHTML = '';
-            if (misCuestionariosGlobal.length === 0) { contenedor.innerHTML += '<p class="text-gray-500 italic text-sm">Aún no tienes módulos asignados.</p>'; return; }
+            if (misCuestionariosGlobal.length === 0 && misErroresGlobal.length === 0) { contenedor.innerHTML += '<p class="text-gray-500 italic text-sm">Aún no tienes módulos asignados.</p>'; return; }
 
             const categorias = {};
             misCuestionariosGlobal.forEach(c => {
@@ -375,9 +477,7 @@
             for (const [nombre, datos] of Object.entries(categorias)) {
                 const nombreSeguro = encodeURIComponent(nombre);
                 contenedor.innerHTML += `
-                    <button onclick="verExamenesDeCategoria('${nombreSeguro}', '${datos.id}', '${datos.color}')" 
-                            class="w-full bg-white py-4 px-4 rounded-xl hover:shadow-md transition shadow-sm text-left flex justify-between items-center border-2" 
-                            style="border-color: ${datos.color}30; background-color: ${datos.color}05;">
+                    <button onclick="verExamenesDeCategoria('${nombreSeguro}', '${datos.id}', '${datos.color}')" class="w-full bg-white py-4 px-4 rounded-xl hover:shadow-md transition shadow-sm text-left flex justify-between items-center border-2" style="border-color: ${datos.color}30; background-color: ${datos.color}05;">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm" style="background-color: ${datos.color};">${nombre.charAt(0).toUpperCase()}</div>
                             <div><p class="font-bold text-gray-800 text-lg">${nombre}</p><p class="text-sm font-semibold" style="color: ${datos.color};">${datos.cantidad} módulos de estudio</p></div>
@@ -389,26 +489,17 @@
         }
 
         function verExamenesDeCategoria(nombreSeguro, idCatRaw, colorCat) {
-            const nombreCat = decodeURIComponent(nombreSeguro);
-            const contenedor = document.getElementById('contenedor-mis-examenes');
-            const idCat = idCatRaw === 'null' ? null : idCatRaw;
-            
+            const nombreCat = decodeURIComponent(nombreSeguro); const contenedor = document.getElementById('contenedor-mis-examenes'); const idCat = idCatRaw === 'null' ? null : idCatRaw;
             contenedor.innerHTML = `<button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver a Categorías</button>`;
             
-            // BOTÓN DE ORO: SIMULACIÓN FINAL
             contenedor.innerHTML += `
                 <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 p-1 rounded-xl mb-4 shadow-lg">
                     <button onclick="iniciarSimulacionGeneral('${idCatRaw}', '${nombreSeguro}')" class="w-full bg-white py-4 px-4 rounded-lg hover:bg-yellow-50 transition text-left flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-2xl shadow-sm bg-yellow-500">🎓</div>
-                            <div><p class="font-bold text-gray-800 text-lg">Simulación Final: ${nombreCat}</p><p class="text-sm font-bold text-yellow-600">⏱️ 2 Horas</p></div>
-                        </div>
-                        <span style="color: #eab308; font-size: 1.5rem;">🏆</span>
+                        <div class="flex items-center gap-3"><div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-2xl shadow-sm bg-yellow-500">🎓</div><div><p class="font-bold text-gray-800 text-lg">Simulación Final: ${nombreCat}</p><p class="text-sm font-bold text-yellow-600">⏱️ 2 Horas</p></div></div><span style="color: #eab308; font-size: 1.5rem;">🏆</span>
                     </button>
                 </div>
             `;
 
-            // ZONAS DE REFUERZO (SI HAY ERRORES DE ESTA CATEGORÍA)
             const erroresModulos = misErroresGlobal.filter(e => e.cat_id == idCat && e.es_simulacion === false);
             const erroresSimulacion = misErroresGlobal.filter(e => e.cat_id == idCat && e.es_simulacion === true);
 
@@ -416,8 +507,7 @@
                 contenedor.innerHTML += `
                     <div class="bg-red-50 p-1 rounded-xl mb-3 shadow-sm border border-red-200">
                         <button onclick="abrirZonaRefuerzo('${idCatRaw}', false, '${colorCat}', '${nombreSeguro}')" class="w-full bg-white py-3 px-4 rounded-lg hover:bg-red-100 transition text-left flex justify-between items-center">
-                            <div><p class="font-bold text-red-700">🚨 Repaso de Módulos</p><p class="text-xs font-bold text-red-500">${erroresModulos.length} fallas arrastrando</p></div>
-                            <span style="font-size: 1.5rem;">🧠</span>
+                            <div><p class="font-bold text-red-700">🚨 Repaso de Módulos</p><p class="text-xs font-bold text-red-500">${erroresModulos.length} fallas arrastrando</p></div><span style="font-size: 1.5rem;">🧠</span>
                         </button>
                     </div>`;
             }
@@ -425,13 +515,11 @@
                 contenedor.innerHTML += `
                     <div class="bg-orange-50 p-1 rounded-xl mb-4 shadow-sm border border-orange-200">
                         <button onclick="abrirZonaRefuerzo('${idCatRaw}', true, '${colorCat}', '${nombreSeguro}')" class="w-full bg-white py-3 px-4 rounded-lg hover:bg-orange-100 transition text-left flex justify-between items-center">
-                            <div><p class="font-bold text-orange-700">🚨 Repaso de Simulación Final</p><p class="text-xs font-bold text-orange-500">${erroresSimulacion.length} fallas arrastrando</p></div>
-                            <span style="font-size: 1.5rem;">🧠</span>
+                            <div><p class="font-bold text-orange-700">🚨 Repaso de Simulación Final</p><p class="text-xs font-bold text-orange-500">${erroresSimulacion.length} fallas arrastrando</p></div><span style="font-size: 1.5rem;">🧠</span>
                         </button>
                     </div>`;
             }
 
-            // LISTA DE MÓDULOS NORMALES
             const examenes = misCuestionariosGlobal.filter(c => (c.categoria_nombre || 'Módulo General') === nombreCat);
             examenes.forEach(c => {
                 const tituloSeguro = encodeURIComponent(c.titulo); const colorHex = c.categoria_color || '#64748b';
@@ -443,8 +531,7 @@
         }
 
         function abrirZonaRefuerzo(idCatRaw, isSim, colorCat, nombreSeguro) {
-            const nombreCat = decodeURIComponent(nombreSeguro);
-            const idCat = idCatRaw === 'null' ? null : idCatRaw;
+            const nombreCat = decodeURIComponent(nombreSeguro); const idCat = idCatRaw === 'null' ? null : idCatRaw;
             const errores = misErroresGlobal.filter(e => e.cat_id == idCat && e.es_simulacion === isSim);
             const tipoRepaso = isSim ? 'Simulación Final' : 'Módulos';
             
@@ -462,23 +549,20 @@
         async function iniciarExamenRepaso(catId, isSim, nombreSeguro) {
             cuestionarioActualId = 'repaso'; esExamenDeRepaso = true; esSimulacionGlobal = false; esRepasoSimulacionGlobal = isSim; categoriaActualSimulacionId = catId;
             const nombreCat = decodeURIComponent(nombreSeguro);
-            document.getElementById('titulo-examen-en-curso').innerText = '🚨 Repaso de Errores';
-            cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-gray-500">Armando bloque...</p>';
+            document.getElementById('titulo-examen-en-curso').innerText = '🚨 Repaso de Errores'; cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-gray-500">Armando bloque...</p>';
 
             const res = await fetch(`/examen-repaso/${usuarioActualId}/${catId}/${isSim}`); const data = await res.json(); 
             respuestasUsuario = {}; paginaActual = 0;
             if (!data.preguntas || data.preguntas.length === 0) { Swal.fire('¡Felicidades!', 'Ya no tienes errores acumulados.', 'success'); return cargarMisExamenes(); }
 
-            examenActivo = mezclarArreglo(data.preguntas); 
-            examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
+            examenActivo = mezclarArreglo(data.preguntas); examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
             document.getElementById('titulo-examen-en-curso').innerText = `🚨 Repaso de ${isSim ? 'Simulación' : 'Módulos'} (${nombreCat}) - Intento ${data.intentoActual} de 3`;
             renderizarExamenPaginado();
         }
 
         async function iniciarExamen(id, tituloCodificado) {
             cuestionarioActualId = id; esExamenDeRepaso = false; esSimulacionGlobal = false; esRepasoSimulacionGlobal = false; categoriaActualSimulacionId = null;
-            document.getElementById('titulo-examen-en-curso').innerText = decodeURIComponent(tituloCodificado);
-            cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
+            document.getElementById('titulo-examen-en-curso').innerText = decodeURIComponent(tituloCodificado); cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
             
             const res = await fetch(`/examen/${id}`); examenActivo = await res.json(); 
             if (examenActivo.error) { Swal.fire('Error', examenActivo.error, 'error'); return cargarMisExamenes(); }
@@ -486,8 +570,7 @@
             respuestasUsuario = {}; paginaActual = 0;
             if (examenActivo.length === 0) { document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-red-500">Sin preguntas.</p>'; return; }
 
-            examenActivo = mezclarArreglo(examenActivo); 
-            examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
+            examenActivo = mezclarArreglo(examenActivo); examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
             renderizarExamenPaginado();
         }
 
@@ -496,26 +579,21 @@
             if(!confirmar.isConfirmed) return;
 
             cuestionarioActualId = 'simulacion'; esExamenDeRepaso = false; esSimulacionGlobal = true; esRepasoSimulacionGlobal = false; categoriaActualSimulacionId = catId;
-            document.getElementById('titulo-examen-en-curso').innerText = `🎓 Simulación Final: ${decodeURIComponent(nombreSeguro)}`;
-            cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center font-bold text-yellow-600">Revolviendo las preguntas... Prepárate.</p>';
+            document.getElementById('titulo-examen-en-curso').innerText = `🎓 Simulación Final: ${decodeURIComponent(nombreSeguro)}`; cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center font-bold text-yellow-600">Revolviendo las preguntas... Prepárate.</p>';
 
             const res = await fetch(`/examen-simulacion-final/${catId}`); examenActivo = await res.json();
             respuestasUsuario = {}; paginaActual = 0;
             
             if (examenActivo.length === 0) { document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-red-500">Sin preguntas en esta categoría.</p>'; return; }
 
-            examenActivo = mezclarArreglo(examenActivo);
-            examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
-            
-            iniciarReloj(); 
-            renderizarExamenPaginado();
+            examenActivo = mezclarArreglo(examenActivo); examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
+            iniciarReloj(); renderizarExamenPaginado();
         }
 
-        // --- SISTEMA DE PAGINACIÓN (10 en 10) ---
+        // --- SISTEMA DE PAGINACIÓN ---
         function renderizarExamenPaginado() {
             const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '';
-            const inicio = paginaActual * PREGUNTAS_POR_PAGINA;
-            const fin = Math.min(inicio + PREGUNTAS_POR_PAGINA, examenActivo.length);
+            const inicio = paginaActual * PREGUNTAS_POR_PAGINA; const fin = Math.min(inicio + PREGUNTAS_POR_PAGINA, examenActivo.length);
             const preguntasPagina = examenActivo.slice(inicio, fin);
 
             preguntasPagina.forEach((pregunta, index) => {
@@ -557,16 +635,15 @@
         function detenerReloj() { clearInterval(timerInterval); document.getElementById('reloj-flotante').classList.add('hidden'); document.getElementById('reloj-flotante').classList.replace('bg-red-600', 'bg-slate-900'); }
         function abandonarExamen() { detenerReloj(); cargarMisExamenes(); }
 
-        // --- VALIDACIÓN Y CALIFICACIÓN ---
+        // --- VALIDACIÓN DE PREGUNTAS FALTANTES ---
         async function finalizarExamen(forzado = false) {
             if (!forzado) {
                 let faltantes = [];
                 examenActivo.forEach((pregunta, index) => { if (!(pregunta.id in respuestasUsuario)) faltantes.push(index + 1); });
 
                 if (faltantes.length > 0) {
-                    let mensajeFaltantes = `Te faltan <b>${faltantes.length}</b> preguntas.<br><br>`;
-                    mensajeFaltantes += faltantes.length <= 15 ? `<b>Revisa los números:</b> ${faltantes.join(', ')}` : `<b>Revisa los números:</b> ${faltantes.slice(0, 15).join(', ')}... y más.`;
-                    const confirmar = await Swal.fire({ title: '¿Entregar examen incompleto?', html: mensajeFaltantes, icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, entregar así', cancelButtonText: 'Volver a revisar', confirmButtonColor: '#ef4444' });
+                    let msj = `Te faltan <b>${faltantes.length}</b> preguntas.<br><br>` + (faltantes.length <= 15 ? `<b>Revisa:</b> ${faltantes.join(', ')}` : `<b>Revisa:</b> ${faltantes.slice(0, 15).join(', ')}... y más.`);
+                    const confirmar = await Swal.fire({ title: '¿Entregar incompleto?', html: msj, icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, entregar así', cancelButtonText: 'Volver a revisar', confirmButtonColor: '#ef4444' });
                     if (!confirmar.isConfirmed) return;
                 } else {
                     const confirmarOk = await Swal.fire({ title: '¿Finalizar examen?', text: 'Has contestado todas las preguntas. ¿Deseas entregar?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, calificar', cancelButtonText: 'Revisar de nuevo', confirmButtonColor: '#22c55e' });
@@ -594,10 +671,8 @@
             await fetch('/guardar-resultado', { 
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify({ 
-                    usuario_id: usuarioActualId, cuestionario_id: cuestionarioActualId, 
-                    aciertos: aciertos, total: examenActivo.length, respuestas: respuestasUsuario, 
-                    es_repaso: esExamenDeRepaso, es_simulacion: esSimulacionGlobal, categoria_id: categoriaActualSimulacionId,
-                    repaso_de_simulacion: esRepasoSimulacionGlobal
+                    usuario_id: usuarioActualId, cuestionario_id: cuestionarioActualId, aciertos: aciertos, total: examenActivo.length, respuestas: respuestasUsuario, 
+                    es_repaso: esExamenDeRepaso, es_simulacion: esSimulacionGlobal, categoria_id: categoriaActualSimulacionId, repaso_de_simulacion: esRepasoSimulacionGlobal
                 }) 
             });
             
@@ -612,6 +687,9 @@
             const categorias = {};
             miHistorialGlobal.forEach(h => {
                 let nombreCat = h.categoria_nombre || 'Módulo General'; let colorCat = h.categoria_color || '#64748b';
+                if(h.es_repaso) { nombreCat = h.repaso_de_simulacion ? `🚨 Repaso: Simulación ${h.categoria_nombre}` : `🚨 Repaso: Módulos ${h.categoria_nombre}`; colorCat = '#ef4444'; }
+                if(h.es_simulacion) { nombreCat = `🎓 Simulación Final: ${h.categoria_nombre}`; colorCat = '#eab308'; }
+
                 if(!categorias[nombreCat]) categorias[nombreCat] = { color: colorCat, cantidad: 0 };
                 categorias[nombreCat].cantidad++;
             });
@@ -631,7 +709,12 @@
             const contenedor = document.getElementById('contenedor-mi-historial');
             contenedor.innerHTML = `<button onclick="renderizarCategoriasHistorial()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver</button>`;
             
-            const historial = miHistorialGlobal.filter(h => { return (h.categoria_nombre || 'Módulo General') === nombreCat; });
+            const historial = miHistorialGlobal.filter(h => { 
+                let catAsignada = h.categoria_nombre || 'Módulo General';
+                if(h.es_repaso) catAsignada = h.repaso_de_simulacion ? `🚨 Repaso: Simulación ${h.categoria_nombre}` : `🚨 Repaso: Módulos ${h.categoria_nombre}`;
+                if(h.es_simulacion) catAsignada = `🎓 Simulación Final: ${h.categoria_nombre}`;
+                return catAsignada === nombreCat; 
+            });
             
             historial.forEach(h => {
                 const fechaObj = new Date(h.fecha.replace(' ', 'T') + 'Z'); const fechaBonita = fechaObj.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
