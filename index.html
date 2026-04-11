@@ -53,7 +53,6 @@
             <div id="contenedor-mis-examenes" class="mb-8 space-y-3"></div>
 
             <h3 class="text-xl font-bold text-gray-800 mb-4 border-t pt-6 text-left">Mi Historial de Intentos</h3>
-            
             <div id="contenedor-mi-historial" class="mb-8 space-y-2 max-h-80 overflow-y-auto"></div>
 
             <button onclick="cerrarSesion()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg mt-4">Cerrar Sesión</button>
@@ -114,7 +113,7 @@
 
             <div class="bg-red-50 p-4 rounded-lg mb-6 border text-left border-red-200">
                 <h3 class="font-bold text-red-700 mb-2">7. Análisis de Errores por Alumno</h3>
-                <p class="text-xs text-gray-600 mb-2">Visualiza las preguntas que el alumno ha fallado y aún no domina.</p>
+                <p class="text-xs text-gray-600 mb-2">Visualiza las preguntas que el alumno trae arrastrando en su Zona de Refuerzo.</p>
                 <select id="lista-alumnos-errores" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
                 <button onclick="verErroresAdmin()" class="w-full bg-red-600 text-white font-bold py-2 rounded-lg mb-3 hover:bg-red-700">Ver Preguntas Falladas</button>
                 <div id="contenedor-errores-admin" class="hidden max-h-60 overflow-y-auto space-y-2 bg-white p-3 border rounded"></div>
@@ -154,7 +153,7 @@
             </div>
             <h3 class="font-bold text-left text-gray-700 mb-4 border-b pb-1">Desglose de respuestas:</h3>
             <div id="contenedor-desglose" class="text-left space-y-4 mb-8 max-h-96 overflow-y-auto pr-2"></div>
-            <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mis simuladores</button>
+            <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mi zona de estudio</button>
         </div>
 
         <div id="vista-historial-detalle" class="hidden text-center py-4">
@@ -176,7 +175,7 @@
         let cuestionarioActualId = null;
         let examenActivo = []; 
         let respuestasUsuario = {}; 
-        let esExamenDeRepaso = false; // Variable para saber si guardaremos el resultado como "repaso"
+        let esExamenDeRepaso = false; 
         
         let listaGlobalCategorias = [];
         let listaGlobalCuestionarios = []; 
@@ -206,12 +205,8 @@
                 usuarioActualId = data.id;
                 Swal.fire({ title: '¡Conectado!', text: data.mensaje, icon: 'success', timer: 1000, showConfirmButton: false }).then(() => {
                     document.getElementById('form-login').reset();
-                    if (data.rol === 'admin') {
-                        cargarDatosAdmin(); cambiarVista('vista-admin');
-                    } else {
-                        document.getElementById('texto-bienvenida-alumno').innerText = `Hola, ${usuario}. Listo para estudiar.`;
-                        cargarMisExamenes(); 
-                    }
+                    if (data.rol === 'admin') { cargarDatosAdmin(); cambiarVista('vista-admin'); } 
+                    else { document.getElementById('texto-bienvenida-alumno').innerText = `Hola, ${usuario}. Listo para estudiar.`; cargarMisExamenes(); }
                 });
             } else { Swal.fire('Error', data.error, 'error'); }
         }
@@ -237,8 +232,7 @@
         }
 
         async function crearCategoria() {
-            const nombre = document.getElementById('nueva-categoria-nombre').value;
-            const color = document.getElementById('nueva-categoria-color').value;
+            const nombre = document.getElementById('nueva-categoria-nombre').value; const color = document.getElementById('nueva-categoria-color').value;
             if(!nombre) return Swal.fire('Error', 'Escribe un nombre para la categoría', 'error');
             const res = await fetch('/crear-categoria', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre, color }) });
             if(res.ok) { Swal.fire({ title: 'Categoría creada', icon: 'success', timer: 1000, showConfirmButton: false }); document.getElementById('nueva-categoria-nombre').value = ''; await cargarCategorias(); } 
@@ -246,10 +240,8 @@
         }
 
         async function cargarCategorias() {
-            const res = await fetch('/categorias');
-            listaGlobalCategorias = await res.json();
-            const sNuevo = document.getElementById('select-categoria-nuevo');
-            const sEditar = document.getElementById('select-categoria-editar');
+            const res = await fetch('/categorias'); listaGlobalCategorias = await res.json();
+            const sNuevo = document.getElementById('select-categoria-nuevo'); const sEditar = document.getElementById('select-categoria-editar');
             let opcionesHTML = '<option value="">Sin categoría (Gris por defecto)</option>';
             listaGlobalCategorias.forEach(cat => { opcionesHTML += `<option value="${cat.id}">${cat.nombre}</option>`; });
             sNuevo.innerHTML = opcionesHTML; sEditar.innerHTML = opcionesHTML;
@@ -263,22 +255,12 @@
         }
 
         async function cargarCuestionariosEnSelect() {
-            const res = await fetch('/cuestionarios'); 
-            listaGlobalCuestionarios = await res.json();
-            const sEditarDatos = document.getElementById('lista-cuestionarios-editar-datos');
-            const sPreguntas = document.getElementById('lista-cuestionarios-preguntas');
-            const sAsignar = document.getElementById('lista-cuestionarios-asignar');
-            
-            sEditarDatos.innerHTML = '<option value="">Selecciona un módulo...</option>';
-            sPreguntas.innerHTML = '<option value="">Selecciona un módulo...</option>'; 
-            sAsignar.innerHTML = '<option value="">Selecciona un módulo...</option>';
-            
+            const res = await fetch('/cuestionarios'); listaGlobalCuestionarios = await res.json();
+            const sEditarDatos = document.getElementById('lista-cuestionarios-editar-datos'); const sPreguntas = document.getElementById('lista-cuestionarios-preguntas'); const sAsignar = document.getElementById('lista-cuestionarios-asignar');
+            sEditarDatos.innerHTML = '<option value="">Selecciona un módulo...</option>'; sPreguntas.innerHTML = '<option value="">Selecciona un módulo...</option>'; sAsignar.innerHTML = '<option value="">Selecciona un módulo...</option>';
             listaGlobalCuestionarios.forEach(c => { 
-                const catInfo = c.categoria_nombre ? ` (${c.categoria_nombre})` : '';
-                const optionText = `${c.titulo}${catInfo}`;
-                sEditarDatos.innerHTML += `<option value="${c.id}">${optionText}</option>`;
-                sPreguntas.innerHTML += `<option value="${c.id}">${optionText}</option>`; 
-                sAsignar.innerHTML += `<option value="${c.id}">${optionText}</option>`; 
+                const catInfo = c.categoria_nombre ? ` (${c.categoria_nombre})` : ''; const optionText = `${c.titulo}${catInfo}`;
+                sEditarDatos.innerHTML += `<option value="${c.id}">${optionText}</option>`; sPreguntas.innerHTML += `<option value="${c.id}">${optionText}</option>`; sAsignar.innerHTML += `<option value="${c.id}">${optionText}</option>`; 
             });
         }
 
@@ -286,8 +268,7 @@
             const id = document.getElementById('lista-cuestionarios-editar-datos').value;
             if(!id) { document.getElementById('editar-solo-titulo').value = ''; document.getElementById('select-categoria-editar').value = ''; return; }
             const cuestionario = listaGlobalCuestionarios.find(c => c.id == id);
-            document.getElementById('editar-solo-titulo').value = cuestionario.titulo;
-            document.getElementById('select-categoria-editar').value = cuestionario.categoria_id || '';
+            document.getElementById('editar-solo-titulo').value = cuestionario.titulo; document.getElementById('select-categoria-editar').value = cuestionario.categoria_id || '';
         }
 
         async function guardarEdicionCuestionario() {
@@ -301,14 +282,12 @@
         function abrirEditorPreguntas() {
             const s = document.getElementById('lista-cuestionarios-preguntas'); const id = s.value;
             if(!id) return Swal.fire('Ojo','Selecciona un cuestionario.','warning');
-            cuestionarioActualId = id;
-            document.getElementById('titulo-cuestionario-activo').innerText = `Gestor de Preguntas: ${s.options[s.selectedIndex].text}`;
+            cuestionarioActualId = id; document.getElementById('titulo-cuestionario-activo').innerText = `Gestor de Preguntas: ${s.options[s.selectedIndex].text}`;
             cargarPreguntasExistentes(); cambiarVista('vista-editor');
         }
 
         async function cargarPreguntasExistentes() {
-            const res = await fetch(`/preguntas-admin/${cuestionarioActualId}`);
-            const preguntas = await res.json();
+            const res = await fetch(`/preguntas-admin/${cuestionarioActualId}`); const preguntas = await res.json();
             const contenedor = document.getElementById('contenedor-preguntas-existentes'); contenedor.innerHTML = '';
             if (preguntas.length === 0) { contenedor.innerHTML = '<p class="text-sm text-gray-500 italic p-2">No hay preguntas en este simulador aún.</p>'; } 
             else { preguntas.forEach((p, i) => { contenedor.innerHTML += `<div class="flex justify-between items-center bg-white p-2 border rounded shadow-sm text-sm"><span class="truncate pr-2 font-medium text-gray-700">${i + 1}. ${p.texto_pregunta}</span><button onclick="borrarPregunta(${p.id})" class="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-bold px-2 py-1 rounded transition">Borrar</button></div>`; }); }
@@ -334,10 +313,7 @@
             const res = await fetch('/alumnos'); const alumnos = await res.json(); 
             const s = document.getElementById('lista-alumnos-asignar'); s.innerHTML = '<option value="">Selecciona un alumno...</option>'; 
             const sErr = document.getElementById('lista-alumnos-errores'); sErr.innerHTML = '<option value="">Selecciona un alumno...</option>'; 
-            alumnos.forEach(a => { 
-                s.innerHTML += `<option value="${a.id}">${a.usuario}</option>`; 
-                sErr.innerHTML += `<option value="${a.id}">${a.usuario}</option>`; 
-            }); 
+            alumnos.forEach(a => { s.innerHTML += `<option value="${a.id}">${a.usuario}</option>`; sErr.innerHTML += `<option value="${a.id}">${a.usuario}</option>`; }); 
         }
         
         async function asignarCuestionario() {
@@ -364,7 +340,6 @@
             document.getElementById('tabla-reportes-container').classList.remove('hidden');
         }
 
-        // VER ERRORES COMO ADMIN
         async function verErroresAdmin() {
             const ui = document.getElementById('lista-alumnos-errores').value;
             if(!ui) return Swal.fire('Ojo','Selecciona un alumno para analizar.','warning');
@@ -377,14 +352,9 @@
             if(errores.length === 0) {
                 contenedor.innerHTML = '<p class="text-green-600 font-bold text-sm">Este alumno no tiene preguntas falladas acumuladas. ¡Excelente!</p>';
             } else {
-                contenedor.innerHTML = `<p class="text-sm font-bold text-red-700 mb-2">Tiene ${errores.length} pregunta(s) por repasar:</p>`;
+                contenedor.innerHTML = `<p class="text-sm font-bold text-red-700 mb-2">Tiene ${errores.length} pregunta(s) arrastrando en su Zona de Refuerzo:</p>`;
                 errores.forEach((e, i) => {
-                    contenedor.innerHTML += `
-                        <div class="border-b pb-2 mb-2">
-                            <p class="text-xs text-slate-500 font-bold uppercase">${e.modulo_origen}</p>
-                            <p class="text-sm text-gray-800">${i+1}. ${e.texto_pregunta}</p>
-                        </div>
-                    `;
+                    contenedor.innerHTML += `<div class="border-b pb-2 mb-2"><p class="text-xs text-slate-500 font-bold uppercase">${e.modulo_origen}</p><p class="text-sm text-gray-800">${i+1}. ${e.texto_pregunta}</p></div>`;
                 });
             }
             contenedor.classList.remove('hidden');
@@ -396,64 +366,42 @@
         }
 
         // ========================================================
-        // INTERFAZ DEL ALUMNO (CARPETAS + ZONA DE REFUERZO)
+        // INTERFAZ DEL ALUMNO
         // ========================================================
         async function cargarMisExamenes() {
-            const resCuestionarios = await fetch(`/mis-cuestionarios/${usuarioActualId}`); 
-            misCuestionariosGlobal = await resCuestionarios.json();
-            
-            const resHistorial = await fetch(`/mi-historial/${usuarioActualId}`);
-            miHistorialGlobal = await resHistorial.json();
-
-            // Pide al servidor si el alumno tiene errores
-            const resErrores = await fetch(`/errores-alumno/${usuarioActualId}`);
-            misErroresGlobal = await resErrores.json();
+            const resCuestionarios = await fetch(`/mis-cuestionarios/${usuarioActualId}`); misCuestionariosGlobal = await resCuestionarios.json();
+            const resHistorial = await fetch(`/mi-historial/${usuarioActualId}`); miHistorialGlobal = await resHistorial.json();
+            const resErrores = await fetch(`/errores-alumno/${usuarioActualId}`); misErroresGlobal = await resErrores.json();
 
             renderizarCategoriasExamenes();
             renderizarCategoriasHistorial();
             cambiarVista('vista-dashboard');
         }
 
-        // --- CARPETAS DE ESTUDIO ---
         function renderizarCategoriasExamenes() {
-            const contenedor = document.getElementById('contenedor-mis-examenes');
-            contenedor.innerHTML = '';
-            
-            if (misCuestionariosGlobal.length === 0 && misErroresGlobal.length === 0) {
-                contenedor.innerHTML = '<p class="text-gray-500 italic text-sm">Aún no tienes simuladores asignados.</p>';
-                return;
-            }
+            const contenedor = document.getElementById('contenedor-mis-examenes'); contenedor.innerHTML = '';
+            if (misCuestionariosGlobal.length === 0 && misErroresGlobal.length === 0) { contenedor.innerHTML = '<p class="text-gray-500 italic text-sm">Aún no tienes simuladores asignados.</p>'; return; }
 
             const categorias = {};
-
-            // Inyectamos la Zona de Refuerzo Inteligente si tiene errores
-            if (misErroresGlobal.length > 0) {
-                categorias['🚨 Zona de Refuerzo'] = { color: '#ef4444', cantidad: 'Inteligente', esRefuerzo: true };
-            }
+            if (misErroresGlobal.length > 0) { categorias['🚨 Zona de Refuerzo'] = { color: '#ef4444', cantidad: 'Inteligente', esRefuerzo: true }; }
 
             misCuestionariosGlobal.forEach(c => {
-                const nombreCat = c.categoria_nombre || 'Módulo General';
-                const colorCat = c.categoria_color || '#64748b';
+                const nombreCat = c.categoria_nombre || 'Módulo General'; const colorCat = c.categoria_color || '#64748b';
                 if(!categorias[nombreCat]) categorias[nombreCat] = { color: colorCat, cantidad: 0, esRefuerzo: false };
                 categorias[nombreCat].cantidad++;
             });
 
             for (const [nombre, datos] of Object.entries(categorias)) {
                 const nombreSeguro = encodeURIComponent(nombre);
-                const subtexto = datos.esRefuerzo ? `${misErroresGlobal.length} preguntas acumuladas` : `${datos.cantidad} simulador(es)`;
+                const subtexto = datos.esRefuerzo ? `${misErroresGlobal.length} preguntas en tu bolsa` : `${datos.cantidad} simulador(es)`;
                 
                 contenedor.innerHTML += `
                     <button onclick="${datos.esRefuerzo ? 'abrirZonaRefuerzo()' : `verExamenesDeCategoria('${nombreSeguro}')`}" 
                             class="w-full bg-white py-4 px-4 rounded-xl hover:shadow-md transition shadow-sm text-left flex justify-between items-center border-2" 
                             style="border-color: ${datos.color}30; background-color: ${datos.color}05;">
                         <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm" style="background-color: ${datos.color};">
-                                ${datos.esRefuerzo ? '!' : nombre.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                                <p class="font-bold text-gray-800 text-lg">${nombre}</p>
-                                <p class="text-sm font-semibold" style="color: ${datos.color};">${subtexto}</p>
-                            </div>
+                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm" style="background-color: ${datos.color};">${datos.esRefuerzo ? '!' : nombre.charAt(0).toUpperCase()}</div>
+                            <div><p class="font-bold text-gray-800 text-lg">${nombre}</p><p class="text-sm font-semibold" style="color: ${datos.color};">${subtexto}</p></div>
                         </div>
                         <span style="color: ${datos.color}; font-size: 1.5rem;">${datos.esRefuerzo ? '🧠' : '📁'}</span>
                     </button>
@@ -461,37 +409,37 @@
             }
         }
 
-        // --- ZONA DE REFUERZO ALUMNO ---
         function abrirZonaRefuerzo() {
             const contenedor = document.getElementById('contenedor-mis-examenes');
             contenedor.innerHTML = `
-                <button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">
-                    ← Volver a Materias
-                </button>
+                <button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver a Materias</button>
                 <div class="bg-red-50 p-5 rounded-xl border border-red-200 shadow-sm text-left">
-                    <h3 class="text-xl font-bold text-red-700 mb-2">Simulador Dinámico</h3>
-                    <p class="text-gray-700 text-sm mb-4">El sistema ha detectado <b>${misErroresGlobal.length} pregunta(s)</b> que has fallado en el pasado y que aún no dominas.</p>
-                    <p class="text-gray-700 text-sm mb-4">Al iniciar, te armaremos un examen al azar de máximo 15 preguntas. <b>¡Si contestas correctamente, la pregunta desaparecerá de esta zona para siempre!</b></p>
-                    <button onclick="iniciarExamenRepaso()" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 shadow-md">▶ Iniciar Repaso Inteligente</button>
+                    <h3 class="text-xl font-bold text-red-700 mb-2">Simulador Dinámico de Repaso</h3>
+                    <p class="text-gray-700 text-sm mb-4">El sistema ha detectado <b>${misErroresGlobal.length} pregunta(s)</b> que has fallado en simuladores anteriores.</p>
+                    <p class="text-gray-700 text-sm mb-4">Se ha armado un bloque especial de hasta 15 de esas preguntas. <b>Tendrás que contestar este mismo bloque 3 veces consecutivas</b>. Si al finalizar tus 3 intentos acertaste en las respuestas, estas desaparecerán de tu lista de errores.</p>
+                    <button onclick="iniciarExamenRepaso()" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 shadow-md">▶ Iniciar Bloque de Repaso</button>
                 </div>
             `;
         }
 
         async function iniciarExamenRepaso() {
-            cuestionarioActualId = 'repaso';
-            esExamenDeRepaso = true;
+            cuestionarioActualId = 'repaso'; esExamenDeRepaso = true;
             document.getElementById('titulo-examen-en-curso').innerText = '🚨 Repaso de Errores';
-            const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '<p class="text-center text-gray-500">Armando tu examen...</p>';
+            const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '<p class="text-center text-gray-500">Armando tu bloque...</p>';
             cambiarVista('vista-hacer-examen');
 
             const res = await fetch(`/examen-repaso/${usuarioActualId}`); 
-            examenActivo = await res.json(); 
+            const data = await res.json(); 
 
             respuestasUsuario = {};
-            if (examenActivo.length === 0) { 
+            if (!data.preguntas || data.preguntas.length === 0) { 
                 Swal.fire('¡Felicidades!', 'Ya no tienes errores acumulados.', 'success');
                 return cargarMisExamenes(); 
             }
+
+            examenActivo = mezclarArreglo(data.preguntas); 
+            // INDICADOR DEL NÚMERO DE INTENTO
+            document.getElementById('titulo-examen-en-curso').innerText = `🚨 Repaso de Errores (Intento ${data.intentoActual} de 3)`;
 
             contenedor.innerHTML = ''; 
             examenActivo.forEach((pregunta, index) => {
@@ -502,34 +450,24 @@
             });
         }
 
-        // --- EXÁMENES NORMALES ---
         function verExamenesDeCategoria(nombreSeguro) {
             const nombreCat = decodeURIComponent(nombreSeguro);
             const contenedor = document.getElementById('contenedor-mis-examenes');
             
-            contenedor.innerHTML = `
-                <button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">
-                    ← Volver a Materias
-                </button>`;
+            contenedor.innerHTML = `<button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver a Materias</button>`;
             
             const examenes = misCuestionariosGlobal.filter(c => (c.categoria_nombre || 'Módulo General') === nombreCat);
-            
             examenes.forEach(c => {
-                const tituloSeguro = encodeURIComponent(c.titulo);
-                const colorHex = c.categoria_color || '#64748b';
+                const tituloSeguro = encodeURIComponent(c.titulo); const colorHex = c.categoria_color || '#64748b';
                 contenedor.innerHTML += `
-                    <button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" 
-                            class="w-full bg-white py-3 px-4 mb-3 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border" 
-                            style="border-left-width: 6px; border-left-color: ${colorHex};">
-                        <div><p class="font-bold text-gray-800">📝 ${c.titulo}</p></div>
-                        <span style="color: ${colorHex}; opacity: 0.8; font-size: 1.5rem;">▶</span>
+                    <button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" class="w-full bg-white py-3 px-4 mb-3 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border" style="border-left-width: 6px; border-left-color: ${colorHex};">
+                        <div><p class="font-bold text-gray-800">📝 ${c.titulo}</p></div><span style="color: ${colorHex}; opacity: 0.8; font-size: 1.5rem;">▶</span>
                     </button>`; 
             });
         }
 
         async function iniciarExamen(id, tituloCodificado) {
-            cuestionarioActualId = id; 
-            esExamenDeRepaso = false;
+            cuestionarioActualId = id; esExamenDeRepaso = false;
             const titulo = decodeURIComponent(tituloCodificado);
             document.getElementById('titulo-examen-en-curso').innerText = titulo;
             const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
@@ -553,19 +491,12 @@
             });
         }
 
-        // --- HISTORIAL COMPRIMIDO ---
         function renderizarCategoriasHistorial() {
-            const contenedor = document.getElementById('contenedor-mi-historial');
-            contenedor.innerHTML = '';
-
-            if (miHistorialGlobal.length === 0) {
-                contenedor.innerHTML = '<p class="text-gray-500 italic text-sm">Aún no has finalizado ningún simulacro.</p>';
-                return;
-            }
+            const contenedor = document.getElementById('contenedor-mi-historial'); contenedor.innerHTML = '';
+            if (miHistorialGlobal.length === 0) { contenedor.innerHTML = '<p class="text-gray-500 italic text-sm">Aún no has finalizado ningún simulacro.</p>'; return; }
 
             const categorias = {};
             miHistorialGlobal.forEach(h => {
-                // Si es un repaso, le forzamos la categoría de Refuerzo para que no se mezcle
                 const nombreCat = h.es_repaso ? '🚨 Historial de Refuerzo' : (h.categoria_nombre || 'Módulo General');
                 const colorCat = h.es_repaso ? '#ef4444' : (h.categoria_color || '#64748b');
                 if(!categorias[nombreCat]) categorias[nombreCat] = { color: colorCat, cantidad: 0 };
@@ -575,15 +506,10 @@
             for (const [nombre, datos] of Object.entries(categorias)) {
                 const nombreSeguro = encodeURIComponent(nombre);
                 contenedor.innerHTML += `
-                    <button onclick="verHistorialDeCategoria('${nombreSeguro}')" 
-                            class="w-full bg-white py-3 px-4 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border border-gray-200">
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full" style="background-color: ${datos.color};"></span>
-                            <p class="font-bold text-gray-700">${nombre}</p>
-                        </div>
+                    <button onclick="verHistorialDeCategoria('${nombreSeguro}')" class="w-full bg-white py-3 px-4 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border border-gray-200">
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background-color: ${datos.color};"></span><p class="font-bold text-gray-700">${nombre}</p></div>
                         <p class="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded">${datos.cantidad} intento(s)</p>
-                    </button>
-                `;
+                    </button>`;
             }
         }
 
@@ -591,44 +517,43 @@
             const nombreCat = decodeURIComponent(nombreSeguro);
             const contenedor = document.getElementById('contenedor-mi-historial');
             
-            contenedor.innerHTML = `
-                <button onclick="renderizarCategoriasHistorial()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">
-                    ← Volver a Materias
-                </button>`;
+            contenedor.innerHTML = `<button onclick="renderizarCategoriasHistorial()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver a Materias</button>`;
             
-            const historial = miHistorialGlobal.filter(h => {
-                const catAsignada = h.es_repaso ? '🚨 Historial de Refuerzo' : (h.categoria_nombre || 'Módulo General');
-                return catAsignada === nombreCat;
-            });
+            const historial = miHistorialGlobal.filter(h => { const catAsignada = h.es_repaso ? '🚨 Historial de Refuerzo' : (h.categoria_nombre || 'Módulo General'); return catAsignada === nombreCat; });
             
             historial.forEach(h => {
-                const fechaObj = new Date(h.fecha.replace(' ', 'T') + 'Z');
-                const fechaBonita = fechaObj.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
-                const porcentaje = h.aciertos / h.total_preguntas;
-                const calificacionDecimal = (porcentaje * 10).toFixed(1);
-                const colorNota = porcentaje >= 0.6 ? 'text-green-600' : 'text-red-500';
+                const fechaObj = new Date(h.fecha.replace(' ', 'T') + 'Z'); const fechaBonita = fechaObj.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                const calificacionDecimal = ((h.aciertos / h.total_preguntas) * 10).toFixed(1); const colorNota = (h.aciertos / h.total_preguntas) >= 0.6 ? 'text-green-600' : 'text-red-500';
                 const colorHex = h.es_repaso ? '#ef4444' : (h.categoria_color || '#64748b'); 
 
                 contenedor.innerHTML += `
-                    <div onclick="verDetalleIntento(${h.id}, ${h.aciertos}, ${h.total_preguntas}, '${calificacionDecimal}')" 
-                         class="bg-white mb-2 p-3 border rounded-lg shadow-sm flex justify-between items-center cursor-pointer hover:bg-slate-50 transition border-l-4" 
-                         style="border-left-color: ${colorHex};">
-                        <div class="text-left">
-                            <p class="font-bold text-sm text-gray-800">${h.titulo}</p>
-                            <p class="text-xs text-gray-500">${fechaBonita}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-black ${colorNota} text-lg">${calificacionDecimal}</p>
-                            <p class="text-xs text-gray-500 font-bold">${h.aciertos}/${h.total_preguntas} aciertos</p>
-                        </div>
-                    </div>
-                `;
+                    <div onclick="verDetalleIntento(${h.id}, ${h.aciertos}, ${h.total_preguntas}, '${calificacionDecimal}')" class="bg-white mb-2 p-3 border rounded-lg shadow-sm flex justify-between items-center cursor-pointer hover:bg-slate-50 transition border-l-4" style="border-left-color: ${colorHex};">
+                        <div class="text-left"><p class="font-bold text-sm text-gray-800">${h.titulo}</p><p class="text-xs text-gray-500">${fechaBonita}</p></div>
+                        <div class="text-right"><p class="font-black ${colorNota} text-lg">${calificacionDecimal}</p><p class="text-xs text-gray-500 font-bold">${h.aciertos}/${h.total_preguntas} aciertos</p></div>
+                    </div>`;
             });
         }
 
-        // ========================================================
-        // CALIFICACIÓN Y GUARDADO COMÚN
-        // ========================================================
+        async function verDetalleIntento(resultado_id, aciertos, total, decimal) {
+            try {
+                document.getElementById('historial-texto-calificacion').innerText = `${aciertos} / ${total}`;
+                const colorNota = parseFloat(decimal) >= 6.0 ? 'text-green-600' : 'text-red-500';
+                document.getElementById('historial-texto-decimal').innerHTML = `Nota: <span class="${colorNota}">${decimal}</span>`;
+
+                const res = await fetch(`/detalle-intento/${resultado_id}`);
+                const detalles = await res.json();
+
+                let desgloseHTML = '';
+                detalles.forEach((d, index) => {
+                    const esCorrecto = d.es_correcta === 1;
+                    desgloseHTML += `<div class="p-4 rounded-lg border ${esCorrecto ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}"><p class="font-semibold text-gray-800 mb-1">${index + 1}. ${d.texto_pregunta}</p>${esCorrecto ? `<p class="text-sm text-green-700">✅ <b>Correcto:</b> ${d.opcion_correcta}</p>` : `<p class="text-sm text-red-700 mb-1">❌ <b>Tu respuesta:</b> ${d.opcion_elegida ? d.opcion_elegida : '<i>Sin contestar</i>'}</p><p class="text-sm text-green-700">💡 <b>Respuesta correcta:</b> ${d.opcion_correcta}</p>`}</div>`;
+                });
+
+                document.getElementById('historial-contenedor-desglose').innerHTML = desgloseHTML;
+                cambiarVista('vista-historial-detalle');
+            } catch (error) { Swal.fire('Error', 'No se pudo cargar el detalle del examen', 'error'); }
+        }
+
         function registrarRespuesta(preguntaId, opcionId) { respuestasUsuario[preguntaId] = parseInt(opcionId); }
 
         async function finalizarExamen() {
@@ -660,14 +585,7 @@
             await fetch('/guardar-resultado', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ 
-                    usuario_id: usuarioActualId, 
-                    cuestionario_id: cuestionarioActualId, 
-                    aciertos: aciertos, 
-                    total: examenActivo.length, 
-                    respuestas: respuestasUsuario,
-                    es_repaso: esExamenDeRepaso // Mandamos la bandera
-                }) 
+                body: JSON.stringify({ usuario_id: usuarioActualId, cuestionario_id: cuestionarioActualId, aciertos: aciertos, total: examenActivo.length, respuestas: respuestasUsuario, es_repaso: esExamenDeRepaso }) 
             });
             
             cambiarVista('vista-resultados');
