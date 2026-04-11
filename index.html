@@ -428,7 +428,7 @@
             // Botón de regreso
             contenedor.innerHTML = `
                 <button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">
-                    ← Volver a Materias
+                    ← Regresar a ver historial de intentos
                 </button>`;
             
             // Filtramos los exámenes de esa categoría
@@ -486,7 +486,7 @@
             
             contenedor.innerHTML = `
                 <button onclick="renderizarCategoriasHistorial()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">
-                    ← Volver a Materias
+                    ← Regresar a ver historial de intentos
                 </button>`;
             
             const historial = miHistorialGlobal.filter(h => (h.categoria_nombre || 'Módulo General') === nombreCat);
