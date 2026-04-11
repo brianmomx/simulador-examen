@@ -48,11 +48,13 @@
         <div id="vista-dashboard" class="hidden text-center py-6">
             <div class="w-16 h-16 bg-slate-800 text-white rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>
             <h2 class="text-3xl font-bold mb-2">Zona de Estudio</h2>
-            <p id="texto-bienvenida-alumno" class="text-gray-600 mb-6">Tus simuladores disponibles:</p>
+            <p id="texto-bienvenida-alumno" class="text-gray-600 mb-6">Tus módulos de estudio:</p>
+            
             <div id="contenedor-mis-examenes" class="mb-8 space-y-3"></div>
 
             <h3 class="text-xl font-bold text-gray-800 mb-4 border-t pt-6 text-left">Mi Historial de Intentos</h3>
-            <div id="contenedor-mi-historial" class="mb-8 space-y-2 max-h-60 overflow-y-auto"></div>
+            
+            <div id="contenedor-mi-historial" class="mb-8 space-y-2 max-h-80 overflow-y-auto"></div>
 
             <button onclick="cerrarSesion()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg mt-4">Cerrar Sesión</button>
         </div>
@@ -146,7 +148,7 @@
             </div>
             <h3 class="font-bold text-left text-gray-700 mb-4 border-b pb-1">Desglose de respuestas:</h3>
             <div id="contenedor-desglose" class="text-left space-y-4 mb-8 max-h-96 overflow-y-auto pr-2"></div>
-            <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mis simuladores</button>
+            <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mi zona de estudio</button>
         </div>
 
         <div id="vista-historial-detalle" class="hidden text-center py-4">
@@ -158,7 +160,7 @@
             </div>
             <h3 class="font-bold text-left text-gray-700 mb-4 border-b pb-1">Tus respuestas en este intento:</h3>
             <div id="historial-contenedor-desglose" class="text-left space-y-4 mb-8 max-h-96 overflow-y-auto pr-2"></div>
-            <button onclick="cambiarVista('vista-dashboard')" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mi zona de estudio</button>
+            <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mi zona de estudio</button>
         </div>
 
     </div>
@@ -168,8 +170,12 @@
         let cuestionarioActualId = null;
         let examenActivo = []; 
         let respuestasUsuario = {}; 
-        let listaGlobalCuestionarios = []; 
+        
+        // Variables globales para guardar la data descargada y no saturar el servidor
         let listaGlobalCategorias = [];
+        let listaGlobalCuestionarios = []; 
+        let misCuestionariosGlobal = [];
+        let miHistorialGlobal = [];
 
         function cambiarVista(vistaDestino) {
             const vistas = ['vista-login', 'vista-registro', 'vista-password', 'vista-dashboard', 'vista-admin', 'vista-editor', 'vista-hacer-examen', 'vista-resultados', 'vista-historial-detalle'];
@@ -215,7 +221,7 @@
         }
 
         // ========================================================
-        // CARGA INICIAL DEL ADMIN
+        // GESTOR DE ADMIN
         // ========================================================
         async function cargarDatosAdmin() {
             await cargarCategorias();
@@ -223,9 +229,6 @@
             await cargarAlumnosEnSelect();
         }
 
-        // ========================================================
-        // GESTOR DE CATEGORÍAS
-        // ========================================================
         async function crearCategoria() {
             const nombre = document.getElementById('nueva-categoria-nombre').value;
             const color = document.getElementById('nueva-categoria-color').value;
@@ -233,51 +236,33 @@
             
             const res = await fetch('/crear-categoria', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre, color }) });
             if(res.ok) {
-                Swal.fire('¡Éxito!', 'Categoría creada', 'success');
+                Swal.fire({ title: 'Categoría creada', icon: 'success', timer: 1000, showConfirmButton: false });
                 document.getElementById('nueva-categoria-nombre').value = '';
-                await cargarCategorias(); // Recarga los selects
-            } else {
-                Swal.fire('Error', 'La categoría ya existe', 'error');
-            }
+                await cargarCategorias(); 
+            } else { Swal.fire('Error', 'La categoría ya existe', 'error'); }
         }
 
         async function cargarCategorias() {
             const res = await fetch('/categorias');
             listaGlobalCategorias = await res.json();
-            
             const sNuevo = document.getElementById('select-categoria-nuevo');
             const sEditar = document.getElementById('select-categoria-editar');
-            
             let opcionesHTML = '<option value="">Sin categoría (Gris por defecto)</option>';
-            listaGlobalCategorias.forEach(cat => {
-                opcionesHTML += `<option value="${cat.id}">${cat.nombre}</option>`;
-            });
-            
-            sNuevo.innerHTML = opcionesHTML;
-            sEditar.innerHTML = opcionesHTML;
+            listaGlobalCategorias.forEach(cat => { opcionesHTML += `<option value="${cat.id}">${cat.nombre}</option>`; });
+            sNuevo.innerHTML = opcionesHTML; sEditar.innerHTML = opcionesHTML;
         }
 
-        // ========================================================
-        // GESTOR DE CUESTIONARIOS
-        // ========================================================
         async function crearCuestionario() {
             const titulo = document.getElementById('nuevo-cuestionario-titulo').value; 
             const categoria_id = document.getElementById('select-categoria-nuevo').value;
             if(!titulo) return Swal.fire('Error','Escribe un título.','error');
-            
             const res = await fetch('/crear-cuestionario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo, categoria_id }) });
-            if(res.ok){ 
-                Swal.fire('¡Éxito!', 'Cuestionario creado', 'success'); 
-                document.getElementById('nuevo-cuestionario-titulo').value=''; 
-                document.getElementById('select-categoria-nuevo').value=''; 
-                cargarCuestionariosEnSelect(); 
-            } 
+            if(res.ok){ Swal.fire({ title: 'Cuestionario creado', icon: 'success', timer: 1000, showConfirmButton: false }); document.getElementById('nuevo-cuestionario-titulo').value=''; document.getElementById('select-categoria-nuevo').value=''; cargarCuestionariosEnSelect(); } 
         }
 
         async function cargarCuestionariosEnSelect() {
             const res = await fetch('/cuestionarios'); 
             listaGlobalCuestionarios = await res.json();
-            
             const sEditarDatos = document.getElementById('lista-cuestionarios-editar-datos');
             const sPreguntas = document.getElementById('lista-cuestionarios-preguntas');
             const sAsignar = document.getElementById('lista-cuestionarios-asignar');
@@ -297,11 +282,7 @@
 
         function cargarDatosEdicionRapida() {
             const id = document.getElementById('lista-cuestionarios-editar-datos').value;
-            if(!id) {
-                document.getElementById('editar-solo-titulo').value = '';
-                document.getElementById('select-categoria-editar').value = '';
-                return;
-            }
+            if(!id) { document.getElementById('editar-solo-titulo').value = ''; document.getElementById('select-categoria-editar').value = ''; return; }
             const cuestionario = listaGlobalCuestionarios.find(c => c.id == id);
             document.getElementById('editar-solo-titulo').value = cuestionario.titulo;
             document.getElementById('select-categoria-editar').value = cuestionario.categoria_id || '';
@@ -311,21 +292,11 @@
             const id = document.getElementById('lista-cuestionarios-editar-datos').value;
             const titulo = document.getElementById('editar-solo-titulo').value;
             const categoria_id = document.getElementById('select-categoria-editar').value;
-            
             if(!id) return Swal.fire('Ojo','Primero selecciona un cuestionario.','warning');
             if(!titulo) return Swal.fire('Error','El nombre no puede estar vacío.','error');
 
-            const res = await fetch(`/editar-cuestionario/${id}`, { 
-                method: 'PUT', headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ titulo, categoria_id }) 
-            });
-
-            if(res.ok) {
-                Swal.fire({ title: '¡Actualizado!', icon: 'success', timer: 1200, showConfirmButton: false });
-                cargarCuestionariosEnSelect(); 
-                document.getElementById('editar-solo-titulo').value = '';
-                document.getElementById('lista-cuestionarios-editar-datos').value = '';
-            }
+            const res = await fetch(`/editar-cuestionario/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo, categoria_id }) });
+            if(res.ok) { Swal.fire({ title: '¡Actualizado!', icon: 'success', timer: 1000, showConfirmButton: false }); cargarCuestionariosEnSelect(); document.getElementById('editar-solo-titulo').value = ''; document.getElementById('lista-cuestionarios-editar-datos').value = ''; }
         }
 
         function abrirEditorPreguntas() {
@@ -340,8 +311,7 @@
         async function cargarPreguntasExistentes() {
             const res = await fetch(`/preguntas-admin/${cuestionarioActualId}`);
             const preguntas = await res.json();
-            const contenedor = document.getElementById('contenedor-preguntas-existentes');
-            contenedor.innerHTML = '';
+            const contenedor = document.getElementById('contenedor-preguntas-existentes'); contenedor.innerHTML = '';
             if (preguntas.length === 0) { contenedor.innerHTML = '<p class="text-sm text-gray-500 italic p-2">No hay preguntas en este simulador aún.</p>'; } 
             else { preguntas.forEach((p, i) => { contenedor.innerHTML += `<div class="flex justify-between items-center bg-white p-2 border rounded shadow-sm text-sm"><span class="truncate pr-2 font-medium text-gray-700">${i + 1}. ${p.texto_pregunta}</span><button onclick="borrarPregunta(${p.id})" class="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-bold px-2 py-1 rounded transition">Borrar</button></div>`; }); }
         }
@@ -359,12 +329,7 @@
             if(!tp || !op0 || !op1 || !op2 || !op3) return Swal.fire('Error','Llena todo.','error');
             const opciones = [ {texto:op0, es_correcta:ci==0?1:0}, {texto:op1, es_correcta:ci==1?1:0}, {texto:op2, es_correcta:ci==2?1:0}, {texto:op3, es_correcta:ci==3?1:0} ];
             const res = await fetch('/agregar-pregunta', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cuestionario_id:cuestionarioActualId, texto_pregunta:tp, opciones}) });
-            if(res.ok){
-                Swal.fire({title:'¡Guardada!', icon:'success', timer:1000, showConfirmButton:false});
-                document.getElementById('texto-pregunta').value=''; document.getElementById('opcion-0').value=''; document.getElementById('opcion-1').value=''; document.getElementById('opcion-2').value=''; document.getElementById('opcion-3').value='';
-                document.querySelector('input[name="opcion_correcta"][value="0"]').checked=true;
-                cargarPreguntasExistentes(); 
-            }
+            if(res.ok){ Swal.fire({title:'¡Guardada!', icon:'success', timer:1000, showConfirmButton:false}); document.getElementById('texto-pregunta').value=''; document.getElementById('opcion-0').value=''; document.getElementById('opcion-1').value=''; document.getElementById('opcion-2').value=''; document.getElementById('opcion-3').value=''; document.querySelector('input[name="opcion_correcta"][value="0"]').checked=true; cargarPreguntasExistentes(); }
         }
 
         async function cargarAlumnosEnSelect() { const res = await fetch('/alumnos'); const alumnos = await res.json(); const s = document.getElementById('lista-alumnos-asignar'); s.innerHTML = '<option value="">Selecciona un alumno...</option>'; alumnos.forEach(a => { s.innerHTML += `<option value="${a.id}">${a.usuario}</option>`; }); }
@@ -374,7 +339,7 @@
             if(!ui || !ci) return Swal.fire('Ojo','Selecciona alumno y cuestionario.','warning');
             const res = await fetch('/asignar', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({usuario_id:ui, cuestionario_id:ci}) });
             const data = await res.json();
-            if(res.ok){ Swal.fire('¡Listo!', data.mensaje, 'success'); document.getElementById('lista-alumnos-asignar').value=''; document.getElementById('lista-cuestionarios-asignar').value=''; } else { Swal.fire('Error', data.error, 'error'); } 
+            if(res.ok){ Swal.fire({ title: '¡Acceso otorgado!', icon: 'success', timer: 1000, showConfirmButton: false }); document.getElementById('lista-alumnos-asignar').value=''; document.getElementById('lista-cuestionarios-asignar').value=''; } else { Swal.fire('Error', data.error, 'error'); } 
         }
 
         async function verReportes() {
@@ -399,69 +364,161 @@
         }
 
         // ========================================================
-        // INTERFAZ DEL ALUMNO CON CATEGORÍAS Y COLORES
+        // INTERFAZ DEL ALUMNO (COMPRESIÓN POR CATEGORÍAS)
         // ========================================================
         async function cargarMisExamenes() {
-            const res = await fetch(`/mis-cuestionarios/${usuarioActualId}`); const cuestionarios = await res.json();
-            const contenedor = document.getElementById('contenedor-mis-examenes'); contenedor.innerHTML = '';
-            if (cuestionarios.length === 0) { contenedor.innerHTML = '<p class="text-gray-500 italic">Aún no tienes simuladores asignados.</p>'; } 
-            else { 
-                cuestionarios.forEach(c => { 
-                    const tituloSeguro = encodeURIComponent(c.titulo);
-                    const colorHex = c.categoria_color || '#64748b'; // Gris si no tiene categoría
-                    const nombreCat = c.categoria_nombre || 'Módulo General';
-                    
-                    contenedor.innerHTML += `
-                        <button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" 
-                                class="w-full bg-white py-3 px-4 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border" 
-                                style="border-left-width: 6px; border-left-color: ${colorHex};">
-                            <div>
-                                <span class="text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide" style="background-color: ${colorHex}15; color: ${colorHex};">${nombreCat}</span>
-                                <p class="font-bold mt-1 text-gray-800">📝 ${c.titulo}</p>
-                            </div>
-                            <span style="color: ${colorHex}; opacity: 0.8; font-size: 1.5rem;">▶</span>
-                        </button>`; 
-                }); 
-            }
-            cargarMiHistorial(); 
+            // Descargamos todo y lo guardamos en variables globales
+            const resCuestionarios = await fetch(`/mis-cuestionarios/${usuarioActualId}`); 
+            misCuestionariosGlobal = await resCuestionarios.json();
+            
+            const resHistorial = await fetch(`/mi-historial/${usuarioActualId}`);
+            miHistorialGlobal = await resHistorial.json();
+
+            // Pintamos las categorías comprimidas
+            renderizarCategoriasExamenes();
+            renderizarCategoriasHistorial();
             cambiarVista('vista-dashboard');
         }
 
-        async function cargarMiHistorial() {
-            const res = await fetch(`/mi-historial/${usuarioActualId}`);
-            const historial = await res.json();
-            const contenedor = document.getElementById('contenedor-mi-historial');
+        // --- LÓGICA DE EXÁMENES POR HACER ---
+        function renderizarCategoriasExamenes() {
+            const contenedor = document.getElementById('contenedor-mis-examenes');
             contenedor.innerHTML = '';
+            
+            if (misCuestionariosGlobal.length === 0) {
+                contenedor.innerHTML = '<p class="text-gray-500 italic text-sm">Aún no tienes simuladores asignados.</p>';
+                return;
+            }
 
-            if (historial.length === 0) {
-                contenedor.innerHTML = '<p class="text-gray-500 italic text-sm">Aún no has finalizado ningún simulacro.</p>';
-            } else {
-                historial.forEach(h => {
-                    const fechaObj = new Date(h.fecha.replace(' ', 'T') + 'Z');
-                    const fechaBonita = fechaObj.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
-                    const porcentaje = h.aciertos / h.total_preguntas;
-                    const calificacionDecimal = (porcentaje * 10).toFixed(1);
-                    const colorNota = porcentaje >= 0.6 ? 'text-green-600' : 'text-red-500';
-                    const colorHex = h.categoria_color || '#64748b'; 
+            // Agrupamos por nombre de categoría
+            const categorias = {};
+            misCuestionariosGlobal.forEach(c => {
+                const nombreCat = c.categoria_nombre || 'Módulo General';
+                const colorCat = c.categoria_color || '#64748b';
+                if(!categorias[nombreCat]) categorias[nombreCat] = { color: colorCat, cantidad: 0 };
+                categorias[nombreCat].cantidad++;
+            });
 
-                    contenedor.innerHTML += `
-                        <div onclick="verDetalleIntento(${h.id}, ${h.aciertos}, ${h.total_preguntas}, '${calificacionDecimal}')" 
-                             class="bg-white p-3 border rounded-lg shadow-sm flex justify-between items-center cursor-pointer hover:bg-slate-50 transition border-l-4" 
-                             style="border-left-color: ${colorHex};">
-                            <div class="text-left">
-                                <p class="font-bold text-sm" style="color: ${colorHex};">${h.titulo}</p>
-                                <p class="text-xs text-gray-500">${fechaBonita}</p>
+            // Pintamos las carpetas
+            for (const [nombre, datos] of Object.entries(categorias)) {
+                const nombreSeguro = encodeURIComponent(nombre);
+                contenedor.innerHTML += `
+                    <button onclick="verExamenesDeCategoria('${nombreSeguro}')" 
+                            class="w-full bg-white py-4 px-4 rounded-xl hover:shadow-md transition shadow-sm text-left flex justify-between items-center border-2" 
+                            style="border-color: ${datos.color}30; background-color: ${datos.color}05;">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm" style="background-color: ${datos.color};">
+                                ${nombre.charAt(0).toUpperCase()}
                             </div>
-                            <div class="text-right">
-                                <p class="font-black ${colorNota} text-lg">${calificacionDecimal}</p>
-                                <p class="text-xs text-gray-500 font-bold">${h.aciertos}/${h.total_preguntas} aciertos</p>
+                            <div>
+                                <p class="font-bold text-gray-800 text-lg">${nombre}</p>
+                                <p class="text-sm font-semibold" style="color: ${datos.color};">${datos.cantidad} simulador(es)</p>
                             </div>
                         </div>
-                    `;
-                });
+                        <span style="color: ${datos.color}; font-size: 1.5rem;">📁</span>
+                    </button>
+                `;
             }
         }
 
+        function verExamenesDeCategoria(nombreSeguro) {
+            const nombreCat = decodeURIComponent(nombreSeguro);
+            const contenedor = document.getElementById('contenedor-mis-examenes');
+            
+            // Botón de regreso
+            contenedor.innerHTML = `
+                <button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">
+                    ← Volver a Materias
+                </button>`;
+            
+            // Filtramos los exámenes de esa categoría
+            const examenes = misCuestionariosGlobal.filter(c => (c.categoria_nombre || 'Módulo General') === nombreCat);
+            
+            examenes.forEach(c => {
+                const tituloSeguro = encodeURIComponent(c.titulo);
+                const colorHex = c.categoria_color || '#64748b';
+                contenedor.innerHTML += `
+                    <button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" 
+                            class="w-full bg-white py-3 px-4 mb-3 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border" 
+                            style="border-left-width: 6px; border-left-color: ${colorHex};">
+                        <div><p class="font-bold text-gray-800">📝 ${c.titulo}</p></div>
+                        <span style="color: ${colorHex}; opacity: 0.8; font-size: 1.5rem;">▶</span>
+                    </button>`; 
+            });
+        }
+
+        // --- LÓGICA DEL HISTORIAL ---
+        function renderizarCategoriasHistorial() {
+            const contenedor = document.getElementById('contenedor-mi-historial');
+            contenedor.innerHTML = '';
+
+            if (miHistorialGlobal.length === 0) {
+                contenedor.innerHTML = '<p class="text-gray-500 italic text-sm">Aún no has finalizado ningún simulacro.</p>';
+                return;
+            }
+
+            const categorias = {};
+            miHistorialGlobal.forEach(h => {
+                const nombreCat = h.categoria_nombre || 'Módulo General';
+                const colorCat = h.categoria_color || '#64748b';
+                if(!categorias[nombreCat]) categorias[nombreCat] = { color: colorCat, cantidad: 0 };
+                categorias[nombreCat].cantidad++;
+            });
+
+            for (const [nombre, datos] of Object.entries(categorias)) {
+                const nombreSeguro = encodeURIComponent(nombre);
+                contenedor.innerHTML += `
+                    <button onclick="verHistorialDeCategoria('${nombreSeguro}')" 
+                            class="w-full bg-white py-3 px-4 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border border-gray-200">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full" style="background-color: ${datos.color};"></span>
+                            <p class="font-bold text-gray-700">${nombre}</p>
+                        </div>
+                        <p class="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded">${datos.cantidad} intento(s)</p>
+                    </button>
+                `;
+            }
+        }
+
+        function verHistorialDeCategoria(nombreSeguro) {
+            const nombreCat = decodeURIComponent(nombreSeguro);
+            const contenedor = document.getElementById('contenedor-mi-historial');
+            
+            contenedor.innerHTML = `
+                <button onclick="renderizarCategoriasHistorial()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">
+                    ← Volver a Materias
+                </button>`;
+            
+            const historial = miHistorialGlobal.filter(h => (h.categoria_nombre || 'Módulo General') === nombreCat);
+            
+            historial.forEach(h => {
+                const fechaObj = new Date(h.fecha.replace(' ', 'T') + 'Z');
+                const fechaBonita = fechaObj.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                const porcentaje = h.aciertos / h.total_preguntas;
+                const calificacionDecimal = (porcentaje * 10).toFixed(1);
+                const colorNota = porcentaje >= 0.6 ? 'text-green-600' : 'text-red-500';
+                const colorHex = h.categoria_color || '#64748b'; 
+
+                contenedor.innerHTML += `
+                    <div onclick="verDetalleIntento(${h.id}, ${h.aciertos}, ${h.total_preguntas}, '${calificacionDecimal}')" 
+                         class="bg-white mb-2 p-3 border rounded-lg shadow-sm flex justify-between items-center cursor-pointer hover:bg-slate-50 transition border-l-4" 
+                         style="border-left-color: ${colorHex};">
+                        <div class="text-left">
+                            <p class="font-bold text-sm text-gray-800">${h.titulo}</p>
+                            <p class="text-xs text-gray-500">${fechaBonita}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-black ${colorNota} text-lg">${calificacionDecimal}</p>
+                            <p class="text-xs text-gray-500 font-bold">${h.aciertos}/${h.total_preguntas} aciertos</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // ========================================================
+        // MOTOR DE EXÁMENES
+        // ========================================================
         async function verDetalleIntento(resultado_id, aciertos, total, decimal) {
             document.getElementById('historial-texto-calificacion').innerText = `${aciertos} / ${total}`;
             const colorNota = parseFloat(decimal) >= 6.0 ? 'text-green-600' : 'text-red-500';
