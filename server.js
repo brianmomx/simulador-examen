@@ -20,18 +20,22 @@ const pool = new Pool({
 const initDB = async () => {
     try {
         await pool.query(`CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, usuario TEXT UNIQUE, correo TEXT UNIQUE, password TEXT, rol TEXT DEFAULT 'alumno')`);
-        // Se añade la columna color por defecto en azul si es una base nueva
-        await pool.query(`CREATE TABLE IF NOT EXISTS cuestionarios (id SERIAL PRIMARY KEY, titulo TEXT, descripcion TEXT, color TEXT DEFAULT '#3b82f6')`);
+        
+        // NUEVA TABLA: Categorías
+        await pool.query(`CREATE TABLE IF NOT EXISTS categorias (id SERIAL PRIMARY KEY, nombre TEXT UNIQUE, color TEXT DEFAULT '#3b82f6')`);
+        
+        await pool.query(`CREATE TABLE IF NOT EXISTS cuestionarios (id SERIAL PRIMARY KEY, titulo TEXT, descripcion TEXT)`);
+        
+        // Relacionamos los cuestionarios con las categorías
+        try { await pool.query(`ALTER TABLE cuestionarios ADD COLUMN categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL`); } catch(e) { /* Si ya existe la columna, lo ignora */ }
+        
         await pool.query(`CREATE TABLE IF NOT EXISTS preguntas (id SERIAL PRIMARY KEY, cuestionario_id INTEGER REFERENCES cuestionarios(id) ON DELETE CASCADE, texto_pregunta TEXT)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS opciones (id SERIAL PRIMARY KEY, pregunta_id INTEGER REFERENCES preguntas(id) ON DELETE CASCADE, texto_opcion TEXT, es_correcta INTEGER)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS asignaciones (usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, cuestionario_id INTEGER REFERENCES cuestionarios(id) ON DELETE CASCADE)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS resultados (id SERIAL PRIMARY KEY, usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, cuestionario_id INTEGER REFERENCES cuestionarios(id) ON DELETE CASCADE, aciertos INTEGER, total_preguntas INTEGER, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS detalles_resultado (id SERIAL PRIMARY KEY, resultado_id INTEGER REFERENCES resultados(id) ON DELETE CASCADE, pregunta_id INTEGER REFERENCES preguntas(id) ON DELETE CASCADE, opcion_seleccionada_id INTEGER REFERENCES opciones(id) ON DELETE CASCADE)`);
         
-        // Parche de seguridad: Agrega la columna 'color' a los cuestionarios que ya existen sin borrar nada
-        try { await pool.query(`ALTER TABLE cuestionarios ADD COLUMN color TEXT DEFAULT '#3b82f6'`); } catch(e) { /* Si ya existe, no hace nada */ }
-        
-        console.log("¡Conectado exitosamente a la base de datos!");
+        console.log("¡Conectado exitosamente a la base de datos (con sistema de Categorías)!");
     } catch (err) {
         console.error("Error al crear tablas en Postgres:", err);
     }
@@ -72,27 +76,54 @@ app.post('/cambiar-password', async (req, res) => {
     } catch(err) { res.status(500).json({ error: "Error interno." }); }
 });
 
-// AHORA GUARDA EL COLOR AL CREAR
-app.post('/crear-cuestionario', async (req, res) => {
-    const { titulo, color } = req.body;
-    const colorDefinitivo = color || '#3b82f6';
+// ==========================================
+// NUEVAS RUTAS DE CATEGORÍAS
+// ==========================================
+app.post('/crear-categoria', async (req, res) => {
+    const { nombre, color } = req.body;
+    if(!nombre || !color) return res.status(400).json({ error: "Falta nombre o color" });
     try {
-        const result = await pool.query(`INSERT INTO cuestionarios (titulo, color) VALUES ($1, $2) RETURNING id`, [titulo, colorDefinitivo]);
+        await pool.query(`INSERT INTO categorias (nombre, color) VALUES ($1, $2)`, [nombre, color]);
+        res.json({ mensaje: "Categoría creada exitosamente" });
+    } catch(e) { res.status(400).json({ error: "Esa categoría ya existe o hubo un error." }); }
+});
+
+app.get('/categorias', async (req, res) => {
+    try {
+        const result = await pool.query(`SELECT * FROM categorias ORDER BY nombre ASC`);
+        res.json(result.rows);
+    } catch(e) { res.status(500).json({ error: "Error al cargar categorías" }); }
+});
+
+// ==========================================
+// CUESTIONARIOS (AHORA USAN CATEGORIA_ID)
+// ==========================================
+app.post('/crear-cuestionario', async (req, res) => {
+    const { titulo, categoria_id } = req.body;
+    const catId = categoria_id ? parseInt(categoria_id) : null;
+    try {
+        const result = await pool.query(`INSERT INTO cuestionarios (titulo, categoria_id) VALUES ($1, $2) RETURNING id`, [titulo, catId]);
         res.json({ mensaje: `¡Cuestionario guardado!`, id: result.rows[0].id });
     } catch(err) { res.status(500).json({ error: "Error al guardar." }); }
 });
 
 app.get('/cuestionarios', async (req, res) => { 
-    const result = await pool.query(`SELECT * FROM cuestionarios ORDER BY id DESC`); 
+    // Hacemos JOIN para que el admin sepa qué categoría tiene cada cuestionario
+    const result = await pool.query(`
+        SELECT c.*, cat.nombre as categoria_nombre 
+        FROM cuestionarios c 
+        LEFT JOIN categorias cat ON c.categoria_id = cat.id 
+        ORDER BY c.id DESC
+    `); 
     res.json(result.rows); 
 });
 
-// AHORA GUARDA EL COLOR AL EDITAR
 app.put('/editar-cuestionario/:id', async (req, res) => {
-    const { titulo, color } = req.body;
+    const { titulo, categoria_id } = req.body;
+    const catId = categoria_id ? parseInt(categoria_id) : null;
     try {
-        await pool.query(`UPDATE cuestionarios SET titulo = $1, color = $2 WHERE id = $3`, [titulo, color, req.params.id]);
-        res.json({ mensaje: "Título y color actualizados exitosamente" });
+        await pool.query(`UPDATE cuestionarios SET titulo = $1, categoria_id = $2 WHERE id = $3`, [titulo, catId, req.params.id]);
+        res.json({ mensaje: "Actualizado exitosamente" });
     } catch(err) { res.status(500).json({ error: "Error al actualizar." }); }
 });
 
@@ -147,18 +178,26 @@ app.get('/reportes', async (req, res) => {
     } catch(err) { res.status(500).json({ error: "Error al cargar reportes." }); }
 });
 
-// AHORA RECUPERA EL COLOR PARA MOSTRARLO AL ALUMNO
+// AHORA BUSCA LA CATEGORÍA PARA PINTAR EL EXAMEN DEL ALUMNO
 app.get('/mis-cuestionarios/:usuario_id', async (req, res) => {
     const { usuario_id } = req.params;
-    const result = await pool.query(`SELECT c.id, c.titulo, c.color FROM cuestionarios c JOIN asignaciones a ON c.id = a.cuestionario_id WHERE a.usuario_id = $1`, [usuario_id]);
+    const result = await pool.query(`
+        SELECT c.id, c.titulo, cat.nombre as categoria_nombre, cat.color as categoria_color
+        FROM cuestionarios c 
+        JOIN asignaciones a ON c.id = a.cuestionario_id 
+        LEFT JOIN categorias cat ON c.categoria_id = cat.id
+        WHERE a.usuario_id = $1
+    `, [usuario_id]);
     res.json(result.rows);
 });
 
 app.get('/mi-historial/:usuario_id', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT r.id, c.titulo, c.color, r.aciertos, r.total_preguntas, r.fecha
-            FROM resultados r JOIN cuestionarios c ON r.cuestionario_id = c.id
+            SELECT r.id, c.titulo, cat.color as categoria_color, r.aciertos, r.total_preguntas, r.fecha
+            FROM resultados r 
+            JOIN cuestionarios c ON r.cuestionario_id = c.id
+            LEFT JOIN categorias cat ON c.categoria_id = cat.id
             WHERE r.usuario_id = $1 ORDER BY r.fecha DESC
         `, [req.params.usuario_id]);
         res.json(result.rows);
