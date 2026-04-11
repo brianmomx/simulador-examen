@@ -20,24 +20,17 @@ const pool = new Pool({
 const initDB = async () => {
     try {
         await pool.query(`CREATE TABLE IF NOT EXISTS usuarios (id SERIAL PRIMARY KEY, usuario TEXT UNIQUE, correo TEXT UNIQUE, password TEXT, rol TEXT DEFAULT 'alumno')`);
-        
-        // NUEVA TABLA: Categorías
         await pool.query(`CREATE TABLE IF NOT EXISTS categorias (id SERIAL PRIMARY KEY, nombre TEXT UNIQUE, color TEXT DEFAULT '#3b82f6')`);
-        
         await pool.query(`CREATE TABLE IF NOT EXISTS cuestionarios (id SERIAL PRIMARY KEY, titulo TEXT, descripcion TEXT)`);
-        
-        // Relacionamos los cuestionarios con las categorías
-        try { await pool.query(`ALTER TABLE cuestionarios ADD COLUMN categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL`); } catch(e) { /* Si ya existe la columna, lo ignora */ }
-        
+        try { await pool.query(`ALTER TABLE cuestionarios ADD COLUMN categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL`); } catch(e) {}
         await pool.query(`CREATE TABLE IF NOT EXISTS preguntas (id SERIAL PRIMARY KEY, cuestionario_id INTEGER REFERENCES cuestionarios(id) ON DELETE CASCADE, texto_pregunta TEXT)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS opciones (id SERIAL PRIMARY KEY, pregunta_id INTEGER REFERENCES preguntas(id) ON DELETE CASCADE, texto_opcion TEXT, es_correcta INTEGER)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS asignaciones (usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, cuestionario_id INTEGER REFERENCES cuestionarios(id) ON DELETE CASCADE)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS resultados (id SERIAL PRIMARY KEY, usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, cuestionario_id INTEGER REFERENCES cuestionarios(id) ON DELETE CASCADE, aciertos INTEGER, total_preguntas INTEGER, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS detalles_resultado (id SERIAL PRIMARY KEY, resultado_id INTEGER REFERENCES resultados(id) ON DELETE CASCADE, pregunta_id INTEGER REFERENCES preguntas(id) ON DELETE CASCADE, opcion_seleccionada_id INTEGER REFERENCES opciones(id) ON DELETE CASCADE)`);
-        
-        console.log("¡Conectado exitosamente a la base de datos (con sistema de Categorías)!");
+        console.log("¡Conectado exitosamente a la base de datos!");
     } catch (err) {
-        console.error("Error al crear tablas en Postgres:", err);
+        console.error("Error al crear tablas:", err);
     }
 };
 initDB();
@@ -76,9 +69,6 @@ app.post('/cambiar-password', async (req, res) => {
     } catch(err) { res.status(500).json({ error: "Error interno." }); }
 });
 
-// ==========================================
-// NUEVAS RUTAS DE CATEGORÍAS
-// ==========================================
 app.post('/crear-categoria', async (req, res) => {
     const { nombre, color } = req.body;
     if(!nombre || !color) return res.status(400).json({ error: "Falta nombre o color" });
@@ -95,9 +85,6 @@ app.get('/categorias', async (req, res) => {
     } catch(e) { res.status(500).json({ error: "Error al cargar categorías" }); }
 });
 
-// ==========================================
-// CUESTIONARIOS (AHORA USAN CATEGORIA_ID)
-// ==========================================
 app.post('/crear-cuestionario', async (req, res) => {
     const { titulo, categoria_id } = req.body;
     const catId = categoria_id ? parseInt(categoria_id) : null;
@@ -108,12 +95,9 @@ app.post('/crear-cuestionario', async (req, res) => {
 });
 
 app.get('/cuestionarios', async (req, res) => { 
-    // Hacemos JOIN para que el admin sepa qué categoría tiene cada cuestionario
     const result = await pool.query(`
         SELECT c.*, cat.nombre as categoria_nombre 
-        FROM cuestionarios c 
-        LEFT JOIN categorias cat ON c.categoria_id = cat.id 
-        ORDER BY c.id DESC
+        FROM cuestionarios c LEFT JOIN categorias cat ON c.categoria_id = cat.id ORDER BY c.id DESC
     `); 
     res.json(result.rows); 
 });
@@ -178,7 +162,6 @@ app.get('/reportes', async (req, res) => {
     } catch(err) { res.status(500).json({ error: "Error al cargar reportes." }); }
 });
 
-// AHORA BUSCA LA CATEGORÍA PARA PINTAR EL EXAMEN DEL ALUMNO
 app.get('/mis-cuestionarios/:usuario_id', async (req, res) => {
     const { usuario_id } = req.params;
     const result = await pool.query(`
@@ -191,10 +174,11 @@ app.get('/mis-cuestionarios/:usuario_id', async (req, res) => {
     res.json(result.rows);
 });
 
+// ACTUALIZADO: Ahora mandamos también el nombre de la categoría en el historial
 app.get('/mi-historial/:usuario_id', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT r.id, c.titulo, cat.color as categoria_color, r.aciertos, r.total_preguntas, r.fecha
+            SELECT r.id, c.titulo, cat.nombre as categoria_nombre, cat.color as categoria_color, r.aciertos, r.total_preguntas, r.fecha
             FROM resultados r 
             JOIN cuestionarios c ON r.cuestionario_id = c.id
             LEFT JOIN categorias cat ON c.categoria_id = cat.id
