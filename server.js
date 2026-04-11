@@ -35,7 +35,7 @@ const initDB = async () => {
         try { await pool.query(`ALTER TABLE resultados ADD COLUMN repaso_de_simulacion BOOLEAN DEFAULT false`); } catch(e) {}
         try { await pool.query(`ALTER TABLE usuarios ADD COLUMN repasos_activos TEXT DEFAULT '{}'`); } catch(e) {}
         
-        console.log("¡Conectado exitosamente a la base de datos (Motor de Conteo de Intentos Activado)!");
+        console.log("¡Conectado exitosamente a la base de datos (Motor de Edición y Eliminación Activado)!");
     } catch (err) { console.error("Error al crear tablas:", err); }
 };
 initDB();
@@ -100,6 +100,22 @@ app.put('/editar-cuestionario/:id', async (req, res) => {
     catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
+// NUEVO: ELIMINAR CUESTIONARIO CON PASSWORD ADMIN
+app.post('/eliminar-cuestionario', async (req, res) => {
+    const { admin_id, admin_password, cuestionario_id } = req.body;
+    try {
+        const adminRes = await pool.query(`SELECT password FROM usuarios WHERE id = $1 AND rol = 'admin'`, [admin_id]);
+        if(adminRes.rows.length === 0) return res.status(401).json({error: "No autorizado"});
+        
+        const match = await bcrypt.compare(admin_password, adminRes.rows[0].password);
+        if(!match) return res.status(401).json({error: "Contraseña incorrecta."});
+
+        // Gracias al ON DELETE CASCADE, esto borra todo lo relacionado automáticamente
+        await pool.query(`DELETE FROM cuestionarios WHERE id = $1`, [cuestionario_id]);
+        res.json({ mensaje: "Cuestionario y todos sus datos relacionados eliminados exitosamente." });
+    } catch(e) { res.status(500).json({error: "Error interno"}); }
+});
+
 app.post('/agregar-pregunta', async (req, res) => {
     const { cuestionario_id, texto_pregunta, opciones } = req.body;
     try {
@@ -125,7 +141,29 @@ app.post('/asignar', async (req, res) => {
 });
 
 app.get('/preguntas-admin/:cuestionario_id', async (req, res) => {
-    const result = await pool.query(`SELECT id, texto_pregunta FROM preguntas WHERE cuestionario_id = $1`, [req.params.cuestionario_id]); res.json(result.rows);
+    const result = await pool.query(`SELECT id, texto_pregunta FROM preguntas WHERE cuestionario_id = $1 ORDER BY id ASC`, [req.params.cuestionario_id]); res.json(result.rows);
+});
+
+// NUEVO: OBTENER PREGUNTA INDIVIDUAL PARA EDITARLA
+app.get('/pregunta/:id', async (req, res) => {
+    try {
+        const pregRes = await pool.query(`SELECT * FROM preguntas WHERE id = $1`, [req.params.id]);
+        if(pregRes.rows.length === 0) return res.status(404).json({error: "No encontrada"});
+        const opcRes = await pool.query(`SELECT * FROM opciones WHERE pregunta_id = $1 ORDER BY id ASC`, [req.params.id]);
+        res.json({ pregunta: pregRes.rows[0], opciones: opcRes.rows });
+    } catch(e) { res.status(500).json({error: "Error"}); }
+});
+
+// NUEVO: ACTUALIZAR PREGUNTA EDITADA
+app.put('/editar-pregunta/:id', async (req, res) => {
+    const { texto_pregunta, opciones } = req.body;
+    try {
+        await pool.query(`UPDATE preguntas SET texto_pregunta = $1 WHERE id = $2`, [texto_pregunta, req.params.id]);
+        for(let op of opciones) {
+            await pool.query(`UPDATE opciones SET texto_opcion = $1, es_correcta = $2 WHERE id = $3`, [op.texto, op.es_correcta, op.id]);
+        }
+        res.json({ mensaje: "Pregunta actualizada" });
+    } catch(e) { res.status(500).json({error: "Error al actualizar"}); }
 });
 
 app.delete('/eliminar-pregunta/:id', async (req, res) => {
@@ -148,7 +186,6 @@ app.get('/reportes', async (req, res) => {
     } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
-// ACTUALIZADO: Cuenta la cantidad de veces que el usuario ha completado este cuestionario
 app.get('/mis-cuestionarios/:usuario_id', async (req, res) => {
     try {
         const result = await pool.query(`
