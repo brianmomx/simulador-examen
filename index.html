@@ -46,7 +46,7 @@
         </div>
 
         <div id="vista-dashboard" class="hidden text-center py-6">
-            <div class="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>
+            <div class="w-16 h-16 bg-slate-800 text-white rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>
             <h2 class="text-3xl font-bold mb-2">Zona de Estudio</h2>
             <p id="texto-bienvenida-alumno" class="text-gray-600 mb-6">Tus simuladores disponibles:</p>
             <div id="contenedor-mis-examenes" class="mb-8 space-y-3"></div>
@@ -61,11 +61,14 @@
             <h2 class="text-2xl font-bold mb-4">Panel de Administración</h2>
             <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
                 <h3 class="font-bold text-slate-700 mb-2">1. Crear Nuevo Cuestionario</h3>
-                <input type="text" id="nuevo-cuestionario-titulo" class="w-full px-3 py-2 border rounded-lg mb-3">
+                <div class="flex items-center gap-2 mb-3">
+                    <input type="color" id="nuevo-cuestionario-color" value="#3b82f6" class="h-10 w-14 border rounded cursor-pointer p-1" title="Elige el color del módulo">
+                    <input type="text" id="nuevo-cuestionario-titulo" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Nombre del módulo">
+                </div>
                 <button onclick="crearCuestionario()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">Guardar Cuestionario</button>
             </div>
             <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
-                <h3 class="font-bold text-slate-700 mb-2">2. Gestionar Preguntas</h3>
+                <h3 class="font-bold text-slate-700 mb-2">2. Gestionar Preguntas y Colores</h3>
                 <select id="lista-cuestionarios-editar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
                 <button onclick="abrirEditorPreguntas()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700">Editar Cuestionario</button>
             </div>
@@ -91,10 +94,11 @@
         </div>
 
         <div id="vista-editor" class="hidden py-2 text-left">
-            <p class="text-sm font-bold text-gray-500 mb-1">Nombre del simulador:</p>
-            <div class="flex items-center mb-4 border-b pb-4">
+            <p class="text-sm font-bold text-gray-500 mb-1">Nombre y color del simulador:</p>
+            <div class="flex items-center mb-4 border-b pb-4 gap-2">
+                <input type="color" id="input-editar-color" class="h-10 w-14 border rounded cursor-pointer p-1" title="Cambiar color">
                 <input type="text" id="input-editar-titulo" class="w-full text-xl font-bold text-gray-800 bg-transparent border-b border-dashed border-gray-400 focus:outline-none focus:border-emerald-500 py-1">
-                <button onclick="actualizarTituloCuestionario()" class="ml-3 bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-700 whitespace-nowrap">Guardar Nombre</button>
+                <button onclick="actualizarTituloCuestionario()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-700 whitespace-nowrap">Guardar</button>
             </div>
             
             <h3 class="font-bold text-sm text-gray-600 mt-2 mb-2">Preguntas en este cuestionario:</h3>
@@ -115,7 +119,7 @@
         <div id="vista-hacer-examen" class="hidden text-left py-2">
             <h2 id="titulo-examen-en-curso" class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Examen en curso</h2>
             <div id="contenedor-preguntas" class="mb-8 space-y-8"></div>
-            <button onclick="finalizarExamen()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-lg text-lg">Finalizar y Calificar</button>
+            <button onclick="finalizarExamen()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg text-lg">Finalizar y Calificar</button>
             <button onclick="cargarMisExamenes()" class="w-full text-gray-500 font-bold py-2 mt-2 hover:underline">Abandonar intento</button>
         </div>
 
@@ -123,7 +127,7 @@
             <h2 class="text-3xl font-bold text-gray-800 mb-2">Resultados</h2>
             <div class="bg-slate-100 p-6 rounded-xl mb-6 inline-block w-full">
                 <p class="text-gray-600 font-semibold mb-1">Tu calificación:</p>
-                <p id="texto-calificacion" class="text-5xl font-black text-blue-600">0 / 0</p>
+                <p id="texto-calificacion" class="text-5xl font-black text-slate-800">0 / 0</p>
                 <p id="texto-calificacion-decimal" class="text-2xl font-bold text-gray-500 mt-2">Nota: 0.0</p>
             </div>
             <h3 class="font-bold text-left text-gray-700 mb-4 border-b pb-1">Desglose de respuestas:</h3>
@@ -135,7 +139,7 @@
             <h2 class="text-2xl font-bold text-gray-800 mb-2">Revisión del Intento</h2>
             <div class="bg-slate-100 p-4 rounded-xl mb-6 inline-block w-full">
                 <p class="text-gray-600 font-semibold mb-1">Calificación obtenida:</p>
-                <p id="historial-texto-calificacion" class="text-4xl font-black text-blue-600">0 / 0</p>
+                <p id="historial-texto-calificacion" class="text-4xl font-black text-slate-800">0 / 0</p>
                 <p id="historial-texto-decimal" class="text-2xl font-bold text-gray-500 mt-2">Nota: 0.0</p>
             </div>
             <h3 class="font-bold text-left text-gray-700 mb-4 border-b pb-1">Tus respuestas en este intento:</h3>
@@ -150,6 +154,7 @@
         let cuestionarioActualId = null;
         let examenActivo = []; 
         let respuestasUsuario = {}; 
+        let listaGlobalCuestionarios = []; // Memoria para saber los colores al editar
 
         function cambiarVista(vistaDestino) {
             const vistas = ['vista-login', 'vista-registro', 'vista-password', 'vista-dashboard', 'vista-admin', 'vista-editor', 'vista-hacer-examen', 'vista-resultados', 'vista-historial-detalle'];
@@ -196,33 +201,46 @@
         }
 
         async function crearCuestionario() {
-            const titulo = document.getElementById('nuevo-cuestionario-titulo').value; if(!titulo) return Swal.fire('Error','Escribe un título.','error');
-            const res = await fetch('/crear-cuestionario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo }) });
+            const titulo = document.getElementById('nuevo-cuestionario-titulo').value; 
+            const color = document.getElementById('nuevo-cuestionario-color').value;
+            if(!titulo) return Swal.fire('Error','Escribe un título.','error');
+            const res = await fetch('/crear-cuestionario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo, color }) });
             if(res.ok){ Swal.fire('¡Éxito!', 'Cuestionario creado', 'success'); document.getElementById('nuevo-cuestionario-titulo').value=''; cargarCuestionariosEnSelect(); } 
         }
 
         async function cargarCuestionariosEnSelect() {
-            const res = await fetch('/cuestionarios'); const cuestionarios = await res.json();
-            const sE = document.getElementById('lista-cuestionarios-editar'); const sA = document.getElementById('lista-cuestionarios-asignar');
-            sE.innerHTML = '<option value="">Selecciona...</option>'; sA.innerHTML = '<option value="">Selecciona...</option>';
-            cuestionarios.forEach(c => { sE.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; sA.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; });
+            const res = await fetch('/cuestionarios'); 
+            listaGlobalCuestionarios = await res.json();
+            const sE = document.getElementById('lista-cuestionarios-editar'); 
+            const sA = document.getElementById('lista-cuestionarios-asignar');
+            sE.innerHTML = '<option value="">Selecciona...</option>'; 
+            sA.innerHTML = '<option value="">Selecciona...</option>';
+            listaGlobalCuestionarios.forEach(c => { 
+                sE.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; 
+                sA.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; 
+            });
         }
 
         function abrirEditorPreguntas() {
             const s = document.getElementById('lista-cuestionarios-editar'); const id = s.value;
             if(!id) return Swal.fire('Ojo','Selecciona un cuestionario.','warning');
             cuestionarioActualId = id;
-            document.getElementById('input-editar-titulo').value = s.options[s.selectedIndex].text;
+            
+            const cuestionarioSeleccionado = listaGlobalCuestionarios.find(c => c.id == id);
+            document.getElementById('input-editar-titulo').value = cuestionarioSeleccionado.titulo;
+            document.getElementById('input-editar-color').value = cuestionarioSeleccionado.color || '#3b82f6';
+            
             cargarPreguntasExistentes(); 
             cambiarVista('vista-editor');
         }
 
         async function actualizarTituloCuestionario() {
             const nuevoTitulo = document.getElementById('input-editar-titulo').value;
+            const nuevoColor = document.getElementById('input-editar-color').value;
             if(!nuevoTitulo) return Swal.fire('Error', 'El título no puede estar vacío', 'error');
-            const res = await fetch(`/editar-cuestionario/${cuestionarioActualId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo: nuevoTitulo }) });
+            const res = await fetch(`/editar-cuestionario/${cuestionarioActualId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo: nuevoTitulo, color: nuevoColor }) });
             if(res.ok) {
-                Swal.fire({ title: '¡Nombre Actualizado!', icon: 'success', timer: 1000, showConfirmButton: false });
+                Swal.fire({ title: '¡Actualizado!', icon: 'success', timer: 1000, showConfirmButton: false });
                 cargarCuestionariosEnSelect(); 
             }
         }
@@ -288,16 +306,26 @@
             return arreglo;
         }
 
-        // === AQUÍ ESTÁ EL PARCHE DE SEGURIDAD PARA EL TÍTULO DEL EXAMEN ===
+        // ==========================================
+        // DISEÑO A COLOR DE LOS BOTONES
+        // ==========================================
         async function cargarMisExamenes() {
             const res = await fetch(`/mis-cuestionarios/${usuarioActualId}`); const cuestionarios = await res.json();
             const contenedor = document.getElementById('contenedor-mis-examenes'); contenedor.innerHTML = '';
             if (cuestionarios.length === 0) { contenedor.innerHTML = '<p class="text-gray-500 italic">Aún no tienes simuladores asignados.</p>'; } 
             else { 
                 cuestionarios.forEach(c => { 
-                    // Blindamos el título (convierte símbolos raros en texto seguro para el HTML)
                     const tituloSeguro = encodeURIComponent(c.titulo);
-                    contenedor.innerHTML += `<button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" class="w-full bg-blue-50 text-blue-700 border border-blue-200 font-bold py-3 px-4 rounded-lg hover:bg-blue-600 hover:text-white transition shadow-sm text-left flex justify-between items-center"><span>📝 ${c.titulo}</span><span>▶️</span></button>`; 
+                    const colorHex = c.color || '#3b82f6'; // Si no tiene color guardado, usa el azul clásico
+                    
+                    // Aquí programamos la "magia" del color en el HTML del botón
+                    contenedor.innerHTML += `
+                        <button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" 
+                                class="w-full bg-white font-bold py-3 px-4 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border" 
+                                style="background-color: ${colorHex}10; border-color: ${colorHex}50; color: ${colorHex};">
+                            <span>📝 ${c.titulo}</span>
+                            <span style="color: ${colorHex}; opacity: 0.9;">▶️</span>
+                        </button>`; 
                 }); 
             }
             cargarMiHistorial(); 
@@ -319,11 +347,14 @@
                     const porcentaje = h.aciertos / h.total_preguntas;
                     const calificacionDecimal = (porcentaje * 10).toFixed(1);
                     const colorNota = porcentaje >= 0.6 ? 'text-green-600' : 'text-red-500';
+                    const colorHex = h.color || '#3b82f6'; // Color del módulo en el historial
 
                     contenedor.innerHTML += `
-                        <div onclick="verDetalleIntento(${h.id}, ${h.aciertos}, ${h.total_preguntas}, '${calificacionDecimal}')" class="bg-white p-3 border border-gray-200 rounded-lg shadow-sm flex justify-between items-center cursor-pointer hover:bg-slate-50 transition">
+                        <div onclick="verDetalleIntento(${h.id}, ${h.aciertos}, ${h.total_preguntas}, '${calificacionDecimal}')" 
+                             class="bg-white p-3 border rounded-lg shadow-sm flex justify-between items-center cursor-pointer hover:bg-slate-50 transition border-l-4" 
+                             style="border-left-color: ${colorHex};">
                             <div class="text-left">
-                                <p class="font-bold text-gray-800 text-sm">${h.titulo}</p>
+                                <p class="font-bold text-sm" style="color: ${colorHex};">${h.titulo}</p>
                                 <p class="text-xs text-gray-500">${fechaBonita}</p>
                             </div>
                             <div class="text-right">
@@ -361,10 +392,8 @@
             cambiarVista('vista-historial-detalle');
         }
 
-        // === AQUÍ ESTÁ LA SEGUNDA PARTE DEL PARCHE DE SEGURIDAD ===
         async function iniciarExamen(id, tituloCodificado) {
             cuestionarioActualId = id; 
-            // Decodificamos el título para que se vuelva a ver bonito en pantalla
             const titulo = decodeURIComponent(tituloCodificado);
             document.getElementById('titulo-examen-en-curso').innerText = titulo;
             const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
@@ -387,8 +416,8 @@
             examenActivo.forEach((pregunta, index) => {
                 pregunta.opciones = mezclarArreglo(pregunta.opciones); 
                 let htmlOpciones = '';
-                pregunta.opciones.forEach(opcion => { htmlOpciones += `<label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-blue-50 transition"><input type="radio" name="pregunta_${pregunta.id}" value="${opcion.id}" onchange="registrarRespuesta(${pregunta.id}, ${opcion.id})" class="w-5 h-5 text-blue-600 mr-3"><span class="text-gray-700">${opcion.texto}</span></label>`; });
-                contenedor.innerHTML += `<div class="bg-gray-50 p-5 rounded-xl border border-gray-200"><p class="font-bold text-gray-800 mb-4"><span class="text-blue-600">${index + 1}.</span> ${pregunta.texto}</p><div class="space-y-2">${htmlOpciones}</div></div>`;
+                pregunta.opciones.forEach(opcion => { htmlOpciones += `<label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition"><input type="radio" name="pregunta_${pregunta.id}" value="${opcion.id}" onchange="registrarRespuesta(${pregunta.id}, ${opcion.id})" class="w-5 h-5 text-slate-800 mr-3"><span class="text-gray-700">${opcion.texto}</span></label>`; });
+                contenedor.innerHTML += `<div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm"><p class="font-bold text-gray-800 mb-4"><span class="text-slate-800">${index + 1}.</span> ${pregunta.texto}</p><div class="space-y-2">${htmlOpciones}</div></div>`;
             });
         }
 
