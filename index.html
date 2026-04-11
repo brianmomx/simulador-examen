@@ -46,7 +46,7 @@
         </div>
 
         <div id="vista-dashboard" class="hidden text-center py-6">
-            <div class="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>
+            <div class="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>
             <h2 class="text-3xl font-bold mb-2">Zona de Estudio</h2>
             <p id="texto-bienvenida-alumno" class="text-gray-600 mb-6">Tus simuladores disponibles:</p>
             <div id="contenedor-mis-examenes" class="mb-8 space-y-3"></div>
@@ -217,14 +217,13 @@
             cambiarVista('vista-editor');
         }
 
-        // NUEVO: Función para actualizar el título del cuestionario
         async function actualizarTituloCuestionario() {
             const nuevoTitulo = document.getElementById('input-editar-titulo').value;
             if(!nuevoTitulo) return Swal.fire('Error', 'El título no puede estar vacío', 'error');
             const res = await fetch(`/editar-cuestionario/${cuestionarioActualId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo: nuevoTitulo }) });
             if(res.ok) {
                 Swal.fire({ title: '¡Nombre Actualizado!', icon: 'success', timer: 1000, showConfirmButton: false });
-                cargarCuestionariosEnSelect(); // Recarga la lista para que el admin vea el nuevo nombre
+                cargarCuestionariosEnSelect(); 
             }
         }
 
@@ -289,18 +288,22 @@
             return arreglo;
         }
 
-        // ACTUALIZADA: Ahora carga los exámenes disponibles Y el historial
+        // === AQUÍ ESTÁ EL PARCHE DE SEGURIDAD PARA EL TÍTULO DEL EXAMEN ===
         async function cargarMisExamenes() {
             const res = await fetch(`/mis-cuestionarios/${usuarioActualId}`); const cuestionarios = await res.json();
             const contenedor = document.getElementById('contenedor-mis-examenes'); contenedor.innerHTML = '';
             if (cuestionarios.length === 0) { contenedor.innerHTML = '<p class="text-gray-500 italic">Aún no tienes simuladores asignados.</p>'; } 
-            else { cuestionarios.forEach(c => { contenedor.innerHTML += `<button onclick="iniciarExamen(${c.id}, '${c.titulo}')" class="w-full bg-blue-50 text-blue-700 border border-blue-200 font-bold py-3 px-4 rounded-lg hover:bg-blue-600 hover:text-white transition shadow-sm text-left flex justify-between items-center"><span>📝 ${c.titulo}</span><span>▶️</span></button>`; }); }
-            
-            cargarMiHistorial(); // Llama a la nueva función de historial
+            else { 
+                cuestionarios.forEach(c => { 
+                    // Blindamos el título (convierte símbolos raros en texto seguro para el HTML)
+                    const tituloSeguro = encodeURIComponent(c.titulo);
+                    contenedor.innerHTML += `<button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" class="w-full bg-blue-50 text-blue-700 border border-blue-200 font-bold py-3 px-4 rounded-lg hover:bg-blue-600 hover:text-white transition shadow-sm text-left flex justify-between items-center"><span>📝 ${c.titulo}</span><span>▶️</span></button>`; 
+                }); 
+            }
+            cargarMiHistorial(); 
             cambiarVista('vista-dashboard');
         }
 
-        // NUEVO: Función para cargar la lista de intentos previos del alumno
         async function cargarMiHistorial() {
             const res = await fetch(`/mi-historial/${usuarioActualId}`);
             const historial = await res.json();
@@ -333,7 +336,6 @@
             }
         }
 
-        // NUEVO: Función para ver las preguntas exactas de un intento pasado
         async function verDetalleIntento(resultado_id, aciertos, total, decimal) {
             document.getElementById('historial-texto-calificacion').innerText = `${aciertos} / ${total}`;
             const colorNota = parseFloat(decimal) >= 6.0 ? 'text-green-600' : 'text-red-500';
@@ -359,11 +361,24 @@
             cambiarVista('vista-historial-detalle');
         }
 
-        async function iniciarExamen(id, titulo) {
-            cuestionarioActualId = id; document.getElementById('titulo-examen-en-curso').innerText = titulo;
+        // === AQUÍ ESTÁ LA SEGUNDA PARTE DEL PARCHE DE SEGURIDAD ===
+        async function iniciarExamen(id, tituloCodificado) {
+            cuestionarioActualId = id; 
+            // Decodificamos el título para que se vuelva a ver bonito en pantalla
+            const titulo = decodeURIComponent(tituloCodificado);
+            document.getElementById('titulo-examen-en-curso').innerText = titulo;
             const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
             cambiarVista('vista-hacer-examen');
-            const res = await fetch(`/examen/${id}`); examenActivo = await res.json(); respuestasUsuario = {};
+            
+            const res = await fetch(`/examen/${id}`); 
+            examenActivo = await res.json(); 
+
+            if (examenActivo.error) {
+                Swal.fire('Error', examenActivo.error, 'error');
+                return cambiarVista('vista-dashboard');
+            }
+
+            respuestasUsuario = {};
             if (examenActivo.length === 0) { contenedor.innerHTML = '<p class="text-center text-red-500">Este examen no tiene preguntas aún.</p>'; return; }
 
             examenActivo = mezclarArreglo(examenActivo); 
@@ -386,7 +401,6 @@
                 if (!confirmar.isConfirmed) return;
             }
 
-            // Validamos que TODAS las preguntas estén en el objeto para que se guarden en el historial, aunque no las haya contestado
             examenActivo.forEach(p => { if (!(p.id in respuestasUsuario)) respuestasUsuario[p.id] = null; });
 
             let aciertos = 0; let desgloseHTML = '';
@@ -406,7 +420,6 @@
             document.getElementById('texto-calificacion-decimal').innerHTML = `Nota: <span class="${colorNota}">${calificacionDecimal}</span>`;
             document.getElementById('contenedor-desglose').innerHTML = desgloseHTML;
 
-            // ACTUALIZADA: Ahora también enviamos el objeto 'respuestas' al servidor
             await fetch('/guardar-resultado', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
