@@ -32,12 +32,10 @@ const initDB = async () => {
         try { await pool.query(`ALTER TABLE resultados ADD COLUMN es_repaso BOOLEAN DEFAULT false`); } catch(e) {}
         try { await pool.query(`ALTER TABLE resultados ADD COLUMN es_simulacion BOOLEAN DEFAULT false`); } catch(e) {}
         try { await pool.query(`ALTER TABLE resultados ADD COLUMN categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL`); } catch(e) {}
-        
-        // NUEVAS BANDERAS PARA SEPARAR EL REPASO DE MODULOS DEL REPASO DE SIMULACION
         try { await pool.query(`ALTER TABLE resultados ADD COLUMN repaso_de_simulacion BOOLEAN DEFAULT false`); } catch(e) {}
         try { await pool.query(`ALTER TABLE usuarios ADD COLUMN repasos_activos TEXT DEFAULT '{}'`); } catch(e) {}
         
-        console.log("¡Conectado exitosamente a la base de datos (Motor de Clasificación de Errores por Categoría Activado)!");
+        console.log("¡Conectado exitosamente a la base de datos (Motor Administrativo Avanzado Activado)!");
     } catch (err) { console.error("Error al crear tablas:", err); }
 };
 initDB();
@@ -113,7 +111,7 @@ app.post('/agregar-pregunta', async (req, res) => {
 });
 
 app.get('/alumnos', async (req, res) => { 
-    const result = await pool.query(`SELECT id, usuario FROM usuarios WHERE rol = 'alumno'`); res.json(result.rows); 
+    const result = await pool.query(`SELECT id, usuario, correo FROM usuarios WHERE rol = 'alumno' ORDER BY usuario ASC`); res.json(result.rows); 
 });
 
 app.post('/asignar', async (req, res) => {
@@ -138,7 +136,7 @@ app.delete('/eliminar-pregunta/:id', async (req, res) => {
 app.get('/reportes', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT r.id, u.usuario, 
+            SELECT r.id, u.usuario, u.id as usuario_id, 
                 CASE WHEN r.es_simulacion THEN CONCAT('🎓 SIMULACIÓN FINAL (', COALESCE(cat_sim.nombre, 'General'), ')') 
                      WHEN r.es_repaso THEN (CASE WHEN r.repaso_de_simulacion THEN '🚨 Repaso de Simulación' ELSE '🚨 Repaso de Módulos' END) 
                      ELSE COALESCE(c.titulo, 'Desconocido') END as titulo, 
@@ -200,14 +198,11 @@ app.get('/examen/:cuestionario_id', async (req, res) => {
     } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
-// AHORA DEVUELVE LOS ERRORES CLASIFICADOS POR CATEGORÍA Y TIPO DE EXAMEN
 app.get('/errores-alumno/:usuario_id', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT DISTINCT p.id, p.texto_pregunta, COALESCE(c.titulo, 'Simulación') as modulo_origen,
-                   COALESCE(c.categoria_id, r.categoria_id) as cat_id,
-                   cat.nombre as cat_nombre, cat.color as cat_color,
-                   r.es_simulacion
+                   COALESCE(c.categoria_id, r.categoria_id) as cat_id, cat.nombre as cat_nombre, cat.color as cat_color, r.es_simulacion
             FROM detalles_resultado dr JOIN resultados r ON dr.resultado_id = r.id JOIN preguntas p ON dr.pregunta_id = p.id 
             LEFT JOIN cuestionarios c ON p.cuestionario_id = c.id LEFT JOIN categorias cat ON COALESCE(c.categoria_id, r.categoria_id) = cat.id 
             LEFT JOIN opciones o ON dr.opcion_seleccionada_id = o.id
@@ -224,10 +219,8 @@ app.get('/errores-alumno/:usuario_id', async (req, res) => {
 app.get('/examen-repaso/:usuario_id/:categoria_id/:es_simulacion', async (req, res) => {
     try {
         const userId = req.params.usuario_id;
-        const catIdRaw = req.params.categoria_id;
-        const catId = catIdRaw === 'null' ? null : parseInt(catIdRaw);
-        const isSim = req.params.es_simulacion === 'true';
-        const bucketKey = `${catId}_${isSim}`;
+        const catIdRaw = req.params.categoria_id; const catId = catIdRaw === 'null' ? null : parseInt(catIdRaw);
+        const isSim = req.params.es_simulacion === 'true'; const bucketKey = `${catId}_${isSim}`;
 
         const userRes = await pool.query(`SELECT repasos_activos FROM usuarios WHERE id = $1`, [userId]);
         let repasos = userRes.rows[0].repasos_activos ? JSON.parse(userRes.rows[0].repasos_activos) : {};
@@ -235,17 +228,14 @@ app.get('/examen-repaso/:usuario_id/:categoria_id/:es_simulacion', async (req, r
         let preguntaIds = [];
 
         if (estado.bloque && estado.bloque.length > 0 && estado.intentos < 3) {
-            preguntaIds = estado.bloque; estado.intentos += 1;
-            repasos[bucketKey] = estado;
+            preguntaIds = estado.bloque; estado.intentos += 1; repasos[bucketKey] = estado;
             await pool.query(`UPDATE usuarios SET repasos_activos = $1 WHERE id = $2`, [JSON.stringify(repasos), userId]);
         } else {
             const catFilter = catId ? `COALESCE(c.categoria_id, r.categoria_id) = ${catId}` : `COALESCE(c.categoria_id, r.categoria_id) IS NULL`;
             const resErrores = await pool.query(`
-                SELECT DISTINCT p.id 
-                FROM detalles_resultado dr JOIN resultados r ON dr.resultado_id = r.id JOIN preguntas p ON dr.pregunta_id = p.id 
+                SELECT DISTINCT p.id FROM detalles_resultado dr JOIN resultados r ON dr.resultado_id = r.id JOIN preguntas p ON dr.pregunta_id = p.id 
                 LEFT JOIN cuestionarios c ON p.cuestionario_id = c.id LEFT JOIN opciones o ON dr.opcion_seleccionada_id = o.id
-                WHERE r.usuario_id = $1 AND (o.es_correcta = 0 OR o.id IS NULL) AND r.es_simulacion = $2 AND ${catFilter}
-                AND p.id NOT IN (
+                WHERE r.usuario_id = $1 AND (o.es_correcta = 0 OR o.id IS NULL) AND r.es_simulacion = $2 AND ${catFilter} AND p.id NOT IN (
                     SELECT dr2.pregunta_id FROM detalles_resultado dr2 JOIN resultados r2 ON dr2.resultado_id = r2.id JOIN opciones o2 ON dr2.opcion_seleccionada_id = o2.id 
                     WHERE r2.usuario_id = $1 AND r2.es_repaso = true AND o2.es_correcta = 1
                 )
@@ -257,7 +247,6 @@ app.get('/examen-repaso/:usuario_id/:categoria_id/:es_simulacion', async (req, r
                 await pool.query(`UPDATE usuarios SET repasos_activos = $1 WHERE id = $2`, [JSON.stringify(repasos), userId]);
                 return res.json({ preguntas: [], intentoActual: 0 });
             }
-
             errores = errores.sort(() => 0.5 - Math.random()).slice(0, 15); preguntaIds = errores;
             estado.bloque = preguntaIds; estado.intentos = 1; repasos[bucketKey] = estado;
             await pool.query(`UPDATE usuarios SET repasos_activos = $1 WHERE id = $2`, [JSON.stringify(repasos), userId]);
@@ -277,16 +266,11 @@ app.get('/examen-simulacion-final/:categoria_id', async (req, res) => {
         let queryParams = [catId];
         if(catId === 'null') { queryStr = `SELECT p.id, p.texto_pregunta FROM preguntas p JOIN cuestionarios c ON p.cuestionario_id = c.id WHERE c.categoria_id IS NULL`; queryParams = []; }
 
-        const resPreguntas = await pool.query(queryStr, queryParams);
-        const preguntas = resPreguntas.rows;
+        const resPreguntas = await pool.query(queryStr, queryParams); const preguntas = resPreguntas.rows;
         if (preguntas.length === 0) return res.json([]);
-        
-        const resOpciones = await pool.query(`SELECT id, pregunta_id, texto_opcion, es_correcta FROM opciones`);
-        const opciones = resOpciones.rows;
-        
+        const resOpciones = await pool.query(`SELECT id, pregunta_id, texto_opcion, es_correcta FROM opciones`); const opciones = resOpciones.rows;
         const examenCompleto = preguntas.map(p => ({
-            id: p.id, texto: p.texto_pregunta,
-            opciones: opciones.filter(o => o.pregunta_id === p.id).map(o => ({ id: o.id, texto: o.texto_opcion, es_correcta: o.es_correcta }))
+            id: p.id, texto: p.texto_pregunta, opciones: opciones.filter(o => o.pregunta_id === p.id).map(o => ({ id: o.id, texto: o.texto_opcion, es_correcta: o.es_correcta }))
         }));
         res.json(examenCompleto);
     } catch(e) { res.status(500).json({error: "Error al generar simulación"}); }
@@ -295,18 +279,61 @@ app.get('/examen-simulacion-final/:categoria_id', async (req, res) => {
 app.post('/guardar-resultado', async (req, res) => {
     const { usuario_id, cuestionario_id, aciertos, total, respuestas, es_repaso, es_simulacion, categoria_id, repaso_de_simulacion } = req.body;
     try {
-        const c_id = (es_repaso || es_simulacion) ? null : cuestionario_id;
-        const cat_id = categoria_id ? parseInt(categoria_id) : null;
-        const rep_sim = repaso_de_simulacion ? true : false;
-
+        const c_id = (es_repaso || es_simulacion) ? null : cuestionario_id; const cat_id = categoria_id ? parseInt(categoria_id) : null; const rep_sim = repaso_de_simulacion ? true : false;
         const result = await pool.query(`INSERT INTO resultados (usuario_id, cuestionario_id, aciertos, total_preguntas, es_repaso, es_simulacion, categoria_id, repaso_de_simulacion) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`, [usuario_id, c_id, aciertos, total, es_repaso ? true : false, es_simulacion ? true : false, cat_id, rep_sim]);
         const resultado_id = result.rows[0].id;
         for (const preguntaId in respuestas) {
-            const opcionId = respuestas[preguntaId];
-            await pool.query(`INSERT INTO detalles_resultado (resultado_id, pregunta_id, opcion_seleccionada_id) VALUES ($1, $2, $3)`, [resultado_id, parseInt(preguntaId), opcionId || null]);
+            const opcionId = respuestas[preguntaId]; await pool.query(`INSERT INTO detalles_resultado (resultado_id, pregunta_id, opcion_seleccionada_id) VALUES ($1, $2, $3)`, [resultado_id, parseInt(preguntaId), opcionId || null]);
         }
         res.json({mensaje: "¡Resultados guardados!"});
     } catch(err) { res.status(500).json({ error: "Error al guardar." }); }
+});
+
+// ==========================================
+// NUEVAS RUTAS ADMINISTRATIVAS
+// ==========================================
+app.put('/modificar-password-admin', async (req, res) => {
+    const { usuario_id, nueva_password } = req.body;
+    try {
+        const hash = await bcrypt.hash(nueva_password, 10);
+        await pool.query(`UPDATE usuarios SET password = $1 WHERE id = $2`, [hash, usuario_id]);
+        res.json({ mensaje: "Contraseña actualizada" });
+    } catch(e) { res.status(500).json({error: "Error"}); }
+});
+
+app.delete('/eliminar-usuario/:id', async (req, res) => {
+    try {
+        await pool.query(`DELETE FROM usuarios WHERE id = $1`, [req.params.id]);
+        res.json({ mensaje: "Usuario y todo su historial eliminados en cascada" });
+    } catch(e) { res.status(500).json({error: "Error al eliminar"}); }
+});
+
+app.post('/reset-historial', async (req, res) => {
+    const { admin_id, admin_password, usuario_id, categoria_id } = req.body;
+    try {
+        // 1. Verificar identidad del administrador
+        const adminRes = await pool.query(`SELECT password FROM usuarios WHERE id = $1 AND rol = 'admin'`, [admin_id]);
+        if(adminRes.rows.length === 0) return res.status(401).json({error: "No autorizado"});
+        
+        const match = await bcrypt.compare(admin_password, adminRes.rows[0].password);
+        if(!match) return res.status(401).json({error: "Contraseña de administrador incorrecta. Operación abortada."});
+
+        // 2. Ejecutar Reset
+        if(categoria_id === 'all') {
+            await pool.query(`DELETE FROM resultados WHERE usuario_id = $1`, [usuario_id]);
+            await pool.query(`UPDATE usuarios SET repasos_activos = '{}' WHERE id = $1`, [usuario_id]);
+        } else {
+            const catId = parseInt(categoria_id);
+            await pool.query(`DELETE FROM resultados WHERE usuario_id = $1 AND (categoria_id = $2 OR cuestionario_id IN (SELECT id FROM cuestionarios WHERE categoria_id = $2))`, [usuario_id, catId]);
+            
+            // Limpiar la zona de refuerzo congelada de esa categoría
+            const userRes = await pool.query(`SELECT repasos_activos FROM usuarios WHERE id = $1`, [usuario_id]);
+            let repasos = userRes.rows[0].repasos_activos ? JSON.parse(userRes.rows[0].repasos_activos) : {};
+            delete repasos[`${catId}_true`]; delete repasos[`${catId}_false`];
+            await pool.query(`UPDATE usuarios SET repasos_activos = $1 WHERE id = $2`, [JSON.stringify(repasos), usuario_id]);
+        }
+        res.json({mensaje: "El historial del alumno ha sido reseteado exitosamente."});
+    } catch(e) { res.status(500).json({error: "Error interno al resetear historial"}); }
 });
 
 app.listen(puerto, () => { console.log(`¡Servidor encendido! 🚀 Ábrelo en: http://localhost:${puerto}`); });
