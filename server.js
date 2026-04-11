@@ -29,12 +29,13 @@ const initDB = async () => {
         await pool.query(`CREATE TABLE IF NOT EXISTS resultados (id SERIAL PRIMARY KEY, usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, cuestionario_id INTEGER REFERENCES cuestionarios(id) ON DELETE CASCADE, aciertos INTEGER, total_preguntas INTEGER, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS detalles_resultado (id SERIAL PRIMARY KEY, resultado_id INTEGER REFERENCES resultados(id) ON DELETE CASCADE, pregunta_id INTEGER REFERENCES preguntas(id) ON DELETE CASCADE, opcion_seleccionada_id INTEGER REFERENCES opciones(id) ON DELETE CASCADE)`);
         
-        // Configuraciones especiales para la Zona de Repaso de 3 Intentos
+        // Banderas para tipos de examen
         try { await pool.query(`ALTER TABLE resultados ADD COLUMN es_repaso BOOLEAN DEFAULT false`); } catch(e) {}
+        try { await pool.query(`ALTER TABLE resultados ADD COLUMN es_simulacion BOOLEAN DEFAULT false`); } catch(e) {}
         try { await pool.query(`ALTER TABLE usuarios ADD COLUMN repaso_bloque TEXT`); } catch(e) {}
         try { await pool.query(`ALTER TABLE usuarios ADD COLUMN repaso_intentos INTEGER DEFAULT 0`); } catch(e) {}
         
-        console.log("¡Conectado exitosamente a la base de datos (Motor Inteligente de 3 Intentos Activado)!");
+        console.log("¡Conectado exitosamente a la base de datos (Motor de Simulación Final Activado)!");
     } catch (err) { console.error("Error al crear tablas:", err); }
 };
 initDB();
@@ -135,7 +136,9 @@ app.delete('/eliminar-pregunta/:id', async (req, res) => {
 app.get('/reportes', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT r.id, u.usuario, COALESCE(c.titulo, 'Simulador de Repaso (Errores)') as titulo, r.aciertos, r.total_preguntas, r.fecha
+            SELECT r.id, u.usuario, 
+                CASE WHEN r.es_simulacion THEN '🎓 SIMULACIÓN FINAL' WHEN r.es_repaso THEN '🚨 Simulador de Repaso' ELSE c.titulo END as titulo, 
+                r.aciertos, r.total_preguntas, r.fecha
             FROM resultados r JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN cuestionarios c ON r.cuestionario_id = c.id
             ORDER BY r.fecha DESC
         `);
@@ -155,10 +158,11 @@ app.get('/mis-cuestionarios/:usuario_id', async (req, res) => {
 app.get('/mi-historial/:usuario_id', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT r.id, COALESCE(c.titulo, 'Simulador de Repaso') as titulo, 
-                   COALESCE(cat.nombre, 'Zona de Refuerzo') as categoria_nombre, 
-                   COALESCE(cat.color, '#ef4444') as categoria_color, 
-                   r.aciertos, r.total_preguntas, r.fecha, r.es_repaso
+            SELECT r.id, 
+                   CASE WHEN r.es_simulacion THEN '🎓 SIMULADOR FINAL PROFESIONAL' WHEN r.es_repaso THEN '🚨 Simulador de Repaso' ELSE COALESCE(c.titulo, 'Examen') END as titulo, 
+                   CASE WHEN r.es_simulacion THEN '🏆 Examen de Grado' WHEN r.es_repaso THEN 'Zona de Refuerzo' ELSE COALESCE(cat.nombre, 'Módulo General') END as categoria_nombre, 
+                   CASE WHEN r.es_simulacion THEN '#eab308' WHEN r.es_repaso THEN '#ef4444' ELSE COALESCE(cat.color, '#64748b') END as categoria_color, 
+                   r.aciertos, r.total_preguntas, r.fecha, r.es_repaso, r.es_simulacion
             FROM resultados r LEFT JOIN cuestionarios c ON r.cuestionario_id = c.id LEFT JOIN categorias cat ON c.categoria_id = cat.id
             WHERE r.usuario_id = $1 ORDER BY r.fecha DESC
         `, [req.params.usuario_id]);
@@ -190,22 +194,14 @@ app.get('/examen/:cuestionario_id', async (req, res) => {
     } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
-// ==========================================
-// MOTOR INTELIGENTE DE ERRORES (REPASO DE 3 INTENTOS)
-// ==========================================
 app.get('/errores-alumno/:usuario_id', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT DISTINCT p.id, p.texto_pregunta, COALESCE(c.titulo, 'Sin Módulo') as modulo_origen
-            FROM detalles_resultado dr
-            JOIN resultados r ON dr.resultado_id = r.id
-            JOIN preguntas p ON dr.pregunta_id = p.id
-            LEFT JOIN cuestionarios c ON p.cuestionario_id = c.id
-            LEFT JOIN opciones o ON dr.opcion_seleccionada_id = o.id
+            FROM detalles_resultado dr JOIN resultados r ON dr.resultado_id = r.id JOIN preguntas p ON dr.pregunta_id = p.id LEFT JOIN cuestionarios c ON p.cuestionario_id = c.id LEFT JOIN opciones o ON dr.opcion_seleccionada_id = o.id
             WHERE r.usuario_id = $1 AND (o.es_correcta = 0 OR o.id IS NULL)
             AND p.id NOT IN (
-                SELECT dr2.pregunta_id 
-                FROM detalles_resultado dr2 JOIN resultados r2 ON dr2.resultado_id = r2.id JOIN opciones o2 ON dr2.opcion_seleccionada_id = o2.id 
+                SELECT dr2.pregunta_id FROM detalles_resultado dr2 JOIN resultados r2 ON dr2.resultado_id = r2.id JOIN opciones o2 ON dr2.opcion_seleccionada_id = o2.id 
                 WHERE r2.usuario_id = $1 AND r2.es_repaso = true AND o2.es_correcta = 1
             )
         `, [req.params.usuario_id]);
@@ -219,56 +215,54 @@ app.get('/examen-repaso/:usuario_id', async (req, res) => {
         const userRes = await pool.query(`SELECT repaso_bloque, repaso_intentos FROM usuarios WHERE id = $1`, [userId]);
         let bloque = userRes.rows[0].repaso_bloque ? JSON.parse(userRes.rows[0].repaso_bloque) : null;
         let intentos = userRes.rows[0].repaso_intentos || 0;
-
         let preguntaIds = [];
 
-        // Si tiene un bloque bloqueado y no ha gastado sus 3 intentos, LE DAMOS EL MISMO
         if (bloque && bloque.length > 0 && intentos < 3) {
-            preguntaIds = bloque;
-            await pool.query(`UPDATE usuarios SET repaso_intentos = repaso_intentos + 1 WHERE id = $1`, [userId]);
-            intentos++;
+            preguntaIds = bloque; await pool.query(`UPDATE usuarios SET repaso_intentos = repaso_intentos + 1 WHERE id = $1`, [userId]); intentos++;
         } else {
-            // Ya gastó los 3 intentos, generamos un bloque NUEVO
             const resErrores = await pool.query(`
-                SELECT DISTINCT p.id
-                FROM detalles_resultado dr JOIN resultados r ON dr.resultado_id = r.id JOIN preguntas p ON dr.pregunta_id = p.id LEFT JOIN opciones o ON dr.opcion_seleccionada_id = o.id
-                WHERE r.usuario_id = $1 AND (o.es_correcta = 0 OR o.id IS NULL)
-                AND p.id NOT IN (
+                SELECT DISTINCT p.id FROM detalles_resultado dr JOIN resultados r ON dr.resultado_id = r.id JOIN preguntas p ON dr.pregunta_id = p.id LEFT JOIN opciones o ON dr.opcion_seleccionada_id = o.id
+                WHERE r.usuario_id = $1 AND (o.es_correcta = 0 OR o.id IS NULL) AND p.id NOT IN (
                     SELECT dr2.pregunta_id FROM detalles_resultado dr2 JOIN resultados r2 ON dr2.resultado_id = r2.id JOIN opciones o2 ON dr2.opcion_seleccionada_id = o2.id 
                     WHERE r2.usuario_id = $1 AND r2.es_repaso = true AND o2.es_correcta = 1
                 )
             `, [userId]);
-            
             let errores = resErrores.rows.map(r => r.id);
             if (errores.length === 0) return res.json({ preguntas: [], intentoActual: 0 });
-            
-            // Mezclamos y agarramos hasta 15
-            errores = errores.sort(() => 0.5 - Math.random()).slice(0, 15);
-            preguntaIds = errores;
-            
-            // Bloqueamos este nuevo examen para sus próximos 3 intentos
-            await pool.query(`UPDATE usuarios SET repaso_bloque = $1, repaso_intentos = 1 WHERE id = $2`, [JSON.stringify(preguntaIds), userId]);
-            intentos = 1;
+            errores = errores.sort(() => 0.5 - Math.random()).slice(0, 15); preguntaIds = errores;
+            await pool.query(`UPDATE usuarios SET repaso_bloque = $1, repaso_intentos = 1 WHERE id = $2`, [JSON.stringify(preguntaIds), userId]); intentos = 1;
         }
 
         const resPreguntas = await pool.query(`SELECT id, texto_pregunta FROM preguntas WHERE id = ANY($1::int[])`, [preguntaIds]);
         const resOpciones = await pool.query(`SELECT * FROM opciones WHERE pregunta_id = ANY($1::int[])`, [preguntaIds]);
-
-        const examenCompleto = resPreguntas.rows.map(p => ({
-            id: p.id, texto: p.texto_pregunta,
-            opciones: resOpciones.rows.filter(o => o.pregunta_id === p.id).map(o => ({ id: o.id, texto: o.texto_opcion, es_correcta: o.es_correcta }))
-        }));
-        
-        // Retornamos las preguntas y qué número de intento es
+        const examenCompleto = resPreguntas.rows.map(p => ({ id: p.id, texto: p.texto_pregunta, opciones: resOpciones.rows.filter(o => o.pregunta_id === p.id).map(o => ({ id: o.id, texto: o.texto_opcion, es_correcta: o.es_correcta })) }));
         res.json({ preguntas: examenCompleto, intentoActual: intentos });
     } catch(e) { res.status(500).json({error: "Error"}); }
 });
 
-app.post('/guardar-resultado', async (req, res) => {
-    const { usuario_id, cuestionario_id, aciertos, total, respuestas, es_repaso } = req.body;
+// NUEVO: OBTENER TODAS LAS PREGUNTAS PARA LA SIMULACIÓN FINAL
+app.get('/examen-simulacion-final', async (req, res) => {
     try {
-        const c_id = es_repaso ? null : cuestionario_id;
-        const result = await pool.query(`INSERT INTO resultados (usuario_id, cuestionario_id, aciertos, total_preguntas, es_repaso) VALUES ($1, $2, $3, $4, $5) RETURNING id`, [usuario_id, c_id, aciertos, total, es_repaso ? true : false]);
+        const resPreguntas = await pool.query(`SELECT id, texto_pregunta FROM preguntas`);
+        const preguntas = resPreguntas.rows;
+        if (preguntas.length === 0) return res.json([]);
+        
+        const resOpciones = await pool.query(`SELECT id, pregunta_id, texto_opcion, es_correcta FROM opciones`);
+        const opciones = resOpciones.rows;
+        
+        const examenCompleto = preguntas.map(p => ({
+            id: p.id, texto: p.texto_pregunta,
+            opciones: opciones.filter(o => o.pregunta_id === p.id).map(o => ({ id: o.id, texto: o.texto_opcion, es_correcta: o.es_correcta }))
+        }));
+        res.json(examenCompleto);
+    } catch(e) { res.status(500).json({error: "Error al generar simulación"}); }
+});
+
+app.post('/guardar-resultado', async (req, res) => {
+    const { usuario_id, cuestionario_id, aciertos, total, respuestas, es_repaso, es_simulacion } = req.body;
+    try {
+        const c_id = (es_repaso || es_simulacion) ? null : cuestionario_id;
+        const result = await pool.query(`INSERT INTO resultados (usuario_id, cuestionario_id, aciertos, total_preguntas, es_repaso, es_simulacion) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`, [usuario_id, c_id, aciertos, total, es_repaso ? true : false, es_simulacion ? true : false]);
         const resultado_id = result.rows[0].id;
         for (const preguntaId in respuestas) {
             const opcionId = respuestas[preguntaId];
