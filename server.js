@@ -35,7 +35,7 @@ const initDB = async () => {
         try { await pool.query(`ALTER TABLE resultados ADD COLUMN repaso_de_simulacion BOOLEAN DEFAULT false`); } catch(e) {}
         try { await pool.query(`ALTER TABLE usuarios ADD COLUMN repasos_activos TEXT DEFAULT '{}'`); } catch(e) {}
         
-        console.log("¡Conectado exitosamente a la base de datos (Motor Administrativo Avanzado Activado)!");
+        console.log("¡Conectado exitosamente a la base de datos (Motor de Conteo de Intentos Activado)!");
     } catch (err) { console.error("Error al crear tablas:", err); }
 };
 initDB();
@@ -148,13 +148,17 @@ app.get('/reportes', async (req, res) => {
     } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
+// ACTUALIZADO: Cuenta la cantidad de veces que el usuario ha completado este cuestionario
 app.get('/mis-cuestionarios/:usuario_id', async (req, res) => {
-    const result = await pool.query(`
-        SELECT c.id, c.titulo, c.categoria_id, cat.nombre as categoria_nombre, cat.color as categoria_color
-        FROM cuestionarios c JOIN asignaciones a ON c.id = a.cuestionario_id LEFT JOIN categorias cat ON c.categoria_id = cat.id
-        WHERE a.usuario_id = $1
-    `, [req.params.usuario_id]);
-    res.json(result.rows);
+    try {
+        const result = await pool.query(`
+            SELECT c.id, c.titulo, c.categoria_id, cat.nombre as categoria_nombre, cat.color as categoria_color,
+                   (SELECT COUNT(*) FROM resultados r WHERE r.cuestionario_id = c.id AND r.usuario_id = $1 AND r.es_repaso = false AND r.es_simulacion = false) as cantidad_intentos
+            FROM cuestionarios c JOIN asignaciones a ON c.id = a.cuestionario_id LEFT JOIN categorias cat ON c.categoria_id = cat.id
+            WHERE a.usuario_id = $1
+        `, [req.params.usuario_id]);
+        res.json(result.rows);
+    } catch(err) { res.status(500).json({ error: "Error." }); }
 });
 
 app.get('/mi-historial/:usuario_id', async (req, res) => {
@@ -289,9 +293,6 @@ app.post('/guardar-resultado', async (req, res) => {
     } catch(err) { res.status(500).json({ error: "Error al guardar." }); }
 });
 
-// ==========================================
-// NUEVAS RUTAS ADMINISTRATIVAS
-// ==========================================
 app.put('/modificar-password-admin', async (req, res) => {
     const { usuario_id, nueva_password } = req.body;
     try {
@@ -302,37 +303,31 @@ app.put('/modificar-password-admin', async (req, res) => {
 });
 
 app.delete('/eliminar-usuario/:id', async (req, res) => {
-    try {
-        await pool.query(`DELETE FROM usuarios WHERE id = $1`, [req.params.id]);
-        res.json({ mensaje: "Usuario y todo su historial eliminados en cascada" });
-    } catch(e) { res.status(500).json({error: "Error al eliminar"}); }
+    try { await pool.query(`DELETE FROM usuarios WHERE id = $1`, [req.params.id]); res.json({ mensaje: "Usuario eliminado" }); } 
+    catch(e) { res.status(500).json({error: "Error al eliminar"}); }
 });
 
 app.post('/reset-historial', async (req, res) => {
     const { admin_id, admin_password, usuario_id, categoria_id } = req.body;
     try {
-        // 1. Verificar identidad del administrador
         const adminRes = await pool.query(`SELECT password FROM usuarios WHERE id = $1 AND rol = 'admin'`, [admin_id]);
         if(adminRes.rows.length === 0) return res.status(401).json({error: "No autorizado"});
         
         const match = await bcrypt.compare(admin_password, adminRes.rows[0].password);
-        if(!match) return res.status(401).json({error: "Contraseña de administrador incorrecta. Operación abortada."});
+        if(!match) return res.status(401).json({error: "Contraseña de administrador incorrecta."});
 
-        // 2. Ejecutar Reset
         if(categoria_id === 'all') {
             await pool.query(`DELETE FROM resultados WHERE usuario_id = $1`, [usuario_id]);
             await pool.query(`UPDATE usuarios SET repasos_activos = '{}' WHERE id = $1`, [usuario_id]);
         } else {
             const catId = parseInt(categoria_id);
             await pool.query(`DELETE FROM resultados WHERE usuario_id = $1 AND (categoria_id = $2 OR cuestionario_id IN (SELECT id FROM cuestionarios WHERE categoria_id = $2))`, [usuario_id, catId]);
-            
-            // Limpiar la zona de refuerzo congelada de esa categoría
             const userRes = await pool.query(`SELECT repasos_activos FROM usuarios WHERE id = $1`, [usuario_id]);
             let repasos = userRes.rows[0].repasos_activos ? JSON.parse(userRes.rows[0].repasos_activos) : {};
             delete repasos[`${catId}_true`]; delete repasos[`${catId}_false`];
             await pool.query(`UPDATE usuarios SET repasos_activos = $1 WHERE id = $2`, [JSON.stringify(repasos), usuario_id]);
         }
-        res.json({mensaje: "El historial del alumno ha sido reseteado exitosamente."});
+        res.json({mensaje: "El historial del alumno ha sido reseteado."});
     } catch(e) { res.status(500).json({error: "Error interno al resetear historial"}); }
 });
 
