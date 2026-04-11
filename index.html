@@ -211,7 +211,6 @@
         }
 
         function cerrarSesion() { usuarioActualId = null; detenerReloj(); cambiarVista('vista-login'); }
-
         async function actualizarPassword() {
             const usuario = document.getElementById('pass-usuario').value; const nuevaPassword = document.getElementById('pass-nueva').value;
             if (!usuario || !nuevaPassword) return Swal.fire('Error', 'Llena todos los campos', 'error');
@@ -322,7 +321,7 @@
             const ui = document.getElementById('lista-alumnos-errores').value; if(!ui) return;
             const res = await fetch(`/errores-alumno/${ui}`); const errores = await res.json();
             const contenedor = document.getElementById('contenedor-errores-admin'); contenedor.innerHTML = '';
-            if(errores.length === 0) { contenedor.innerHTML = '<p class="text-green-600 font-bold text-sm">Este alumno no tiene errores acumulados.</p>'; } 
+            if(errores.length === 0) { contenedor.innerHTML = '<p class="text-green-600 font-bold text-sm">Este alumno no tiene preguntas falladas acumuladas.</p>'; } 
             else {
                 contenedor.innerHTML = `<p class="text-sm font-bold text-red-700 mb-2">Tiene ${errores.length} pregunta(s) en su Zona de Refuerzo:</p>`;
                 errores.forEach((e, i) => { contenedor.innerHTML += `<div class="border-b pb-2 mb-2"><p class="text-xs text-slate-500 font-bold uppercase">${e.modulo_origen}</p><p class="text-sm text-gray-800">${i+1}. ${e.texto_pregunta}</p></div>`; });
@@ -413,7 +412,6 @@
             });
         }
 
-        // ZONA DE REFUERZO ALUMNO 
         function abrirZonaRefuerzo() {
             const contenedor = document.getElementById('contenedor-mis-examenes');
             contenedor.innerHTML = `
@@ -540,11 +538,46 @@
 
         function abandonarExamen() { detenerReloj(); cargarMisExamenes(); }
 
+        // --- VALIDACIÓN DE PREGUNTAS FALTANTES ---
         async function finalizarExamen(forzado = false) {
-            const contestadas = Object.keys(respuestasUsuario).length;
-            if (!forzado && contestadas < examenActivo.length) {
-                const confirmar = await Swal.fire({ title: '¿Estás seguro?', text: `Te faltan ${examenActivo.length - contestadas} preguntas.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, finalizar', cancelButtonText: 'Seguir' });
-                if (!confirmar.isConfirmed) return;
+            if (!forzado) {
+                let faltantes = [];
+                examenActivo.forEach((pregunta, index) => {
+                    if (!(pregunta.id in respuestasUsuario)) {
+                        faltantes.push(index + 1); // Guardamos el número exacto de la pregunta
+                    }
+                });
+
+                if (faltantes.length > 0) {
+                    let mensajeFaltantes = `Te faltan <b>${faltantes.length}</b> preguntas por contestar.<br><br>`;
+                    if (faltantes.length <= 15) {
+                        mensajeFaltantes += `<b>Revisa los números:</b> ${faltantes.join(', ')}`;
+                    } else {
+                        mensajeFaltantes += `<b>Revisa los números:</b> ${faltantes.slice(0, 15).join(', ')}... y más.`;
+                    }
+
+                    const confirmar = await Swal.fire({ 
+                        title: '¿Entregar examen incompleto?', 
+                        html: mensajeFaltantes, 
+                        icon: 'warning', 
+                        showCancelButton: true, 
+                        confirmButtonText: 'Sí, entregar así', 
+                        cancelButtonText: 'Volver a revisar',
+                        confirmButtonColor: '#ef4444'
+                    });
+                    if (!confirmar.isConfirmed) return;
+                } else {
+                    const confirmarOk = await Swal.fire({
+                        title: '¿Finalizar examen?',
+                        text: 'Has contestado todas las preguntas. ¿Deseas entregar?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, calificar',
+                        cancelButtonText: 'Revisar de nuevo',
+                        confirmButtonColor: '#22c55e'
+                    });
+                    if (!confirmarOk.isConfirmed) return;
+                }
             }
 
             detenerReloj(); 
