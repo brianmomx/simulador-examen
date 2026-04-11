@@ -29,13 +29,13 @@ const initDB = async () => {
         await pool.query(`CREATE TABLE IF NOT EXISTS resultados (id SERIAL PRIMARY KEY, usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE, cuestionario_id INTEGER REFERENCES cuestionarios(id) ON DELETE CASCADE, aciertos INTEGER, total_preguntas INTEGER, fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await pool.query(`CREATE TABLE IF NOT EXISTS detalles_resultado (id SERIAL PRIMARY KEY, resultado_id INTEGER REFERENCES resultados(id) ON DELETE CASCADE, pregunta_id INTEGER REFERENCES preguntas(id) ON DELETE CASCADE, opcion_seleccionada_id INTEGER REFERENCES opciones(id) ON DELETE CASCADE)`);
         
-        // Banderas para tipos de examen
         try { await pool.query(`ALTER TABLE resultados ADD COLUMN es_repaso BOOLEAN DEFAULT false`); } catch(e) {}
         try { await pool.query(`ALTER TABLE resultados ADD COLUMN es_simulacion BOOLEAN DEFAULT false`); } catch(e) {}
+        try { await pool.query(`ALTER TABLE resultados ADD COLUMN categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL`); } catch(e) {}
         try { await pool.query(`ALTER TABLE usuarios ADD COLUMN repaso_bloque TEXT`); } catch(e) {}
         try { await pool.query(`ALTER TABLE usuarios ADD COLUMN repaso_intentos INTEGER DEFAULT 0`); } catch(e) {}
         
-        console.log("¡Conectado exitosamente a la base de datos (Motor de Simulación Final Activado)!");
+        console.log("¡Conectado exitosamente a la base de datos (Motor de Simulación por Categoría y Paginación Activado)!");
     } catch (err) { console.error("Error al crear tablas:", err); }
 };
 initDB();
@@ -137,9 +137,9 @@ app.get('/reportes', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT r.id, u.usuario, 
-                CASE WHEN r.es_simulacion THEN '🎓 SIMULACIÓN FINAL' WHEN r.es_repaso THEN '🚨 Simulador de Repaso' ELSE c.titulo END as titulo, 
+                CASE WHEN r.es_simulacion THEN CONCAT('🎓 SIMULACIÓN FINAL (', COALESCE(cat_sim.nombre, 'General'), ')') WHEN r.es_repaso THEN '🚨 Simulador de Repaso' ELSE c.titulo END as titulo, 
                 r.aciertos, r.total_preguntas, r.fecha
-            FROM resultados r JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN cuestionarios c ON r.cuestionario_id = c.id
+            FROM resultados r JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN cuestionarios c ON r.cuestionario_id = c.id LEFT JOIN categorias cat_sim ON r.categoria_id = cat_sim.id
             ORDER BY r.fecha DESC
         `);
         res.json(result.rows);
@@ -148,7 +148,7 @@ app.get('/reportes', async (req, res) => {
 
 app.get('/mis-cuestionarios/:usuario_id', async (req, res) => {
     const result = await pool.query(`
-        SELECT c.id, c.titulo, cat.nombre as categoria_nombre, cat.color as categoria_color
+        SELECT c.id, c.titulo, c.categoria_id, cat.nombre as categoria_nombre, cat.color as categoria_color
         FROM cuestionarios c JOIN asignaciones a ON c.id = a.cuestionario_id LEFT JOIN categorias cat ON c.categoria_id = cat.id
         WHERE a.usuario_id = $1
     `, [req.params.usuario_id]);
@@ -159,11 +159,11 @@ app.get('/mi-historial/:usuario_id', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT r.id, 
-                   CASE WHEN r.es_simulacion THEN '🎓 SIMULADOR FINAL PROFESIONAL' WHEN r.es_repaso THEN '🚨 Simulador de Repaso' ELSE COALESCE(c.titulo, 'Examen') END as titulo, 
-                   CASE WHEN r.es_simulacion THEN '🏆 Examen de Grado' WHEN r.es_repaso THEN 'Zona de Refuerzo' ELSE COALESCE(cat.nombre, 'Módulo General') END as categoria_nombre, 
-                   CASE WHEN r.es_simulacion THEN '#eab308' WHEN r.es_repaso THEN '#ef4444' ELSE COALESCE(cat.color, '#64748b') END as categoria_color, 
+                   CASE WHEN r.es_simulacion THEN '🎓 SIMULACIÓN FINAL PROFESIONAL' WHEN r.es_repaso THEN '🚨 Simulador de Repaso' ELSE COALESCE(c.titulo, 'Examen') END as titulo, 
+                   CASE WHEN r.es_repaso THEN 'Zona de Refuerzo' ELSE COALESCE(cat.nombre, COALESCE(cat_sim.nombre, 'Módulo General')) END as categoria_nombre, 
+                   CASE WHEN r.es_repaso THEN '#ef4444' ELSE COALESCE(cat.color, COALESCE(cat_sim.color, '#64748b')) END as categoria_color, 
                    r.aciertos, r.total_preguntas, r.fecha, r.es_repaso, r.es_simulacion
-            FROM resultados r LEFT JOIN cuestionarios c ON r.cuestionario_id = c.id LEFT JOIN categorias cat ON c.categoria_id = cat.id
+            FROM resultados r LEFT JOIN cuestionarios c ON r.cuestionario_id = c.id LEFT JOIN categorias cat ON c.categoria_id = cat.id LEFT JOIN categorias cat_sim ON r.categoria_id = cat_sim.id
             WHERE r.usuario_id = $1 ORDER BY r.fecha DESC
         `, [req.params.usuario_id]);
         res.json(result.rows);
@@ -240,10 +240,19 @@ app.get('/examen-repaso/:usuario_id', async (req, res) => {
     } catch(e) { res.status(500).json({error: "Error"}); }
 });
 
-// NUEVO: OBTENER TODAS LAS PREGUNTAS PARA LA SIMULACIÓN FINAL
-app.get('/examen-simulacion-final', async (req, res) => {
+// SIMULACIÓN DINÁMICA POR CATEGORÍA
+app.get('/examen-simulacion-final/:categoria_id', async (req, res) => {
     try {
-        const resPreguntas = await pool.query(`SELECT id, texto_pregunta FROM preguntas`);
+        const catId = req.params.categoria_id;
+        let queryStr = `SELECT p.id, p.texto_pregunta FROM preguntas p JOIN cuestionarios c ON p.cuestionario_id = c.id WHERE c.categoria_id = $1`;
+        let queryParams = [catId];
+        
+        if(catId === 'null') {
+            queryStr = `SELECT p.id, p.texto_pregunta FROM preguntas p JOIN cuestionarios c ON p.cuestionario_id = c.id WHERE c.categoria_id IS NULL`;
+            queryParams = [];
+        }
+
+        const resPreguntas = await pool.query(queryStr, queryParams);
         const preguntas = resPreguntas.rows;
         if (preguntas.length === 0) return res.json([]);
         
@@ -259,10 +268,11 @@ app.get('/examen-simulacion-final', async (req, res) => {
 });
 
 app.post('/guardar-resultado', async (req, res) => {
-    const { usuario_id, cuestionario_id, aciertos, total, respuestas, es_repaso, es_simulacion } = req.body;
+    const { usuario_id, cuestionario_id, aciertos, total, respuestas, es_repaso, es_simulacion, categoria_id } = req.body;
     try {
         const c_id = (es_repaso || es_simulacion) ? null : cuestionario_id;
-        const result = await pool.query(`INSERT INTO resultados (usuario_id, cuestionario_id, aciertos, total_preguntas, es_repaso, es_simulacion) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`, [usuario_id, c_id, aciertos, total, es_repaso ? true : false, es_simulacion ? true : false]);
+        const cat_id = categoria_id ? parseInt(categoria_id) : null;
+        const result = await pool.query(`INSERT INTO resultados (usuario_id, cuestionario_id, aciertos, total_preguntas, es_repaso, es_simulacion, categoria_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`, [usuario_id, c_id, aciertos, total, es_repaso ? true : false, es_simulacion ? true : false, cat_id]);
         const resultado_id = result.rows[0].id;
         for (const preguntaId in respuestas) {
             const opcionId = respuestas[preguntaId];
