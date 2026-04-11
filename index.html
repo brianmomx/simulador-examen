@@ -53,12 +53,9 @@
             <div class="w-16 h-16 bg-slate-800 text-white rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>
             <h2 class="text-3xl font-bold mb-2">Zona de Estudio</h2>
             <p id="texto-bienvenida-alumno" class="text-gray-600 mb-6">Tus carpetas de estudio:</p>
-            
             <div id="contenedor-mis-examenes" class="mb-8 space-y-3"></div>
-
             <h3 class="text-xl font-bold text-gray-800 mb-4 border-t pt-6 text-left">Mi Historial de Intentos</h3>
             <div id="contenedor-mi-historial" class="mb-8 space-y-2 max-h-80 overflow-y-auto"></div>
-
             <button onclick="cerrarSesion()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg mt-4 hover:bg-red-600 transition">Cerrar Sesión</button>
         </div>
 
@@ -112,7 +109,7 @@
                 <h3 class="font-bold text-red-700 mb-2">7. Análisis de Errores por Alumno</h3>
                 <select id="lista-alumnos-errores" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
                 <button onclick="verErroresAdmin()" class="w-full bg-red-600 text-white font-bold py-2 rounded-lg mb-3 hover:bg-red-700">Ver Preguntas Falladas</button>
-                <div id="contenedor-errores-admin" class="hidden max-h-60 overflow-y-auto space-y-2 bg-white p-3 border rounded"></div>
+                <div id="contenedor-errores-admin" class="hidden max-h-80 overflow-y-auto space-y-4 bg-white p-3 border rounded"></div>
             </div>
             <button onclick="cerrarSesion()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg hover:bg-slate-900">Cerrar Sesión</button>
         </div>
@@ -171,12 +168,12 @@
         let respuestasUsuario = {}; 
         let esExamenDeRepaso = false; 
         let esSimulacionGlobal = false;
+        let esRepasoSimulacionGlobal = false;
         let categoriaActualSimulacionId = null;
         
         let timerInterval;
-        let tiempoRestante = 7200; // 2 horas
+        let tiempoRestante = 7200;
         
-        // Paginación
         let paginaActual = 0;
         const PREGUNTAS_POR_PAGINA = 10;
 
@@ -317,14 +314,30 @@
             }
             document.getElementById('tabla-reportes-container').classList.remove('hidden');
         }
+
         async function verErroresAdmin() {
             const ui = document.getElementById('lista-alumnos-errores').value; if(!ui) return;
             const res = await fetch(`/errores-alumno/${ui}`); const errores = await res.json();
             const contenedor = document.getElementById('contenedor-errores-admin'); contenedor.innerHTML = '';
             if(errores.length === 0) { contenedor.innerHTML = '<p class="text-green-600 font-bold text-sm">Este alumno no tiene preguntas falladas acumuladas.</p>'; } 
             else {
-                contenedor.innerHTML = `<p class="text-sm font-bold text-red-700 mb-2">Tiene ${errores.length} pregunta(s) en su Zona de Refuerzo:</p>`;
-                errores.forEach((e, i) => { contenedor.innerHTML += `<div class="border-b pb-2 mb-2"><p class="text-xs text-slate-500 font-bold uppercase">${e.modulo_origen}</p><p class="text-sm text-gray-800">${i+1}. ${e.texto_pregunta}</p></div>`; });
+                // Agrupar por categoría y simulación para el Admin
+                const agrupados = {};
+                errores.forEach(e => {
+                    const nombreCat = e.cat_nombre || 'Módulo General';
+                    const key = `${nombreCat}_${e.es_simulacion}`;
+                    if(!agrupados[key]) agrupados[key] = { nombreCat, esSim: e.es_simulacion, preguntas: [] };
+                    agrupados[key].preguntas.push(e);
+                });
+
+                for (const key in agrupados) {
+                    const g = agrupados[key];
+                    const tituloGrupo = g.esSim ? `🎓 SIMULACIÓN: ${g.nombreCat}` : `📁 MÓDULOS: ${g.nombreCat}`;
+                    contenedor.innerHTML += `<h4 class="font-bold text-red-700 mt-4 border-b border-red-200">${tituloGrupo} (${g.preguntas.length} errores)</h4>`;
+                    g.preguntas.forEach((p, i) => {
+                        contenedor.innerHTML += `<div class="py-2 border-b border-gray-100"><p class="text-xs text-slate-500 font-bold uppercase">${p.modulo_origen}</p><p class="text-sm text-gray-800">${i+1}. ${p.texto_pregunta}</p></div>`;
+                    });
+                }
             }
             contenedor.classList.remove('hidden');
         }
@@ -350,58 +363,75 @@
 
         function renderizarCategoriasExamenes() {
             const contenedor = document.getElementById('contenedor-mis-examenes'); contenedor.innerHTML = '';
-            
-            if (misCuestionariosGlobal.length === 0 && misErroresGlobal.length === 0) { contenedor.innerHTML += '<p class="text-gray-500 italic text-sm">Aún no tienes módulos asignados.</p>'; return; }
+            if (misCuestionariosGlobal.length === 0) { contenedor.innerHTML += '<p class="text-gray-500 italic text-sm">Aún no tienes módulos asignados.</p>'; return; }
 
             const categorias = {};
-            if (misErroresGlobal.length > 0) { categorias['🚨 Zona de Refuerzo'] = { id: 'repaso', color: '#ef4444', cantidad: 'Inteligente', esRefuerzo: true }; }
-
             misCuestionariosGlobal.forEach(c => {
                 const nombreCat = c.categoria_nombre || 'Módulo General'; const colorCat = c.categoria_color || '#64748b'; const idCat = c.categoria_id || 'null';
-                if(!categorias[nombreCat]) categorias[nombreCat] = { id: idCat, color: colorCat, cantidad: 0, esRefuerzo: false };
+                if(!categorias[nombreCat]) categorias[nombreCat] = { id: idCat, color: colorCat, cantidad: 0 };
                 categorias[nombreCat].cantidad++;
             });
 
             for (const [nombre, datos] of Object.entries(categorias)) {
                 const nombreSeguro = encodeURIComponent(nombre);
-                const subtexto = datos.esRefuerzo ? `${misErroresGlobal.length} preguntas en tu bolsa` : `${datos.cantidad} simulador(es)`;
-                
                 contenedor.innerHTML += `
-                    <button onclick="${datos.esRefuerzo ? 'abrirZonaRefuerzo()' : `verExamenesDeCategoria('${nombreSeguro}', '${datos.id}', '${datos.color}')`}" 
+                    <button onclick="verExamenesDeCategoria('${nombreSeguro}', '${datos.id}', '${datos.color}')" 
                             class="w-full bg-white py-4 px-4 rounded-xl hover:shadow-md transition shadow-sm text-left flex justify-between items-center border-2" 
                             style="border-color: ${datos.color}30; background-color: ${datos.color}05;">
                         <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm" style="background-color: ${datos.color};">${datos.esRefuerzo ? '!' : nombre.charAt(0).toUpperCase()}</div>
-                            <div><p class="font-bold text-gray-800 text-lg">${nombre}</p><p class="text-sm font-semibold" style="color: ${datos.color};">${subtexto}</p></div>
+                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm" style="background-color: ${datos.color};">${nombre.charAt(0).toUpperCase()}</div>
+                            <div><p class="font-bold text-gray-800 text-lg">${nombre}</p><p class="text-sm font-semibold" style="color: ${datos.color};">${datos.cantidad} módulos de estudio</p></div>
                         </div>
-                        <span style="color: ${datos.color}; font-size: 1.5rem;">${datos.esRefuerzo ? '🧠' : '📁'}</span>
+                        <span style="color: ${datos.color}; font-size: 1.5rem;">📁</span>
                     </button>
                 `;
             }
         }
 
-        function verExamenesDeCategoria(nombreSeguro, idCat, colorCat) {
+        function verExamenesDeCategoria(nombreSeguro, idCatRaw, colorCat) {
             const nombreCat = decodeURIComponent(nombreSeguro);
             const contenedor = document.getElementById('contenedor-mis-examenes');
+            const idCat = idCatRaw === 'null' ? null : idCatRaw;
             
-            contenedor.innerHTML = `<button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver</button>`;
+            contenedor.innerHTML = `<button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver a Categorías</button>`;
             
-            // EL BOTÓN DE ORO: SIMULACIÓN COMPLETA POR CATEGORÍA
+            // BOTÓN DE ORO: SIMULACIÓN FINAL
             contenedor.innerHTML += `
-                <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 p-1 rounded-xl mb-6 shadow-lg mt-2">
-                    <button onclick="iniciarSimulacionGeneral('${idCat}', '${nombreSeguro}')" class="w-full bg-white py-4 px-4 rounded-lg hover:bg-yellow-50 transition text-left flex justify-between items-center">
+                <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 p-1 rounded-xl mb-4 shadow-lg">
+                    <button onclick="iniciarSimulacionGeneral('${idCatRaw}', '${nombreSeguro}')" class="w-full bg-white py-4 px-4 rounded-lg hover:bg-yellow-50 transition text-left flex justify-between items-center">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-2xl shadow-sm bg-yellow-500">🎓</div>
-                            <div>
-                                <p class="font-bold text-gray-800 text-lg">Simulación Final: ${nombreCat}</p>
-                                <p class="text-sm font-bold text-yellow-600">⏱️ 2 Horas</p>
-                            </div>
+                            <div><p class="font-bold text-gray-800 text-lg">Simulación Final: ${nombreCat}</p><p class="text-sm font-bold text-yellow-600">⏱️ 2 Horas</p></div>
                         </div>
                         <span style="color: #eab308; font-size: 1.5rem;">🏆</span>
                     </button>
                 </div>
             `;
 
+            // ZONAS DE REFUERZO (SI HAY ERRORES DE ESTA CATEGORÍA)
+            const erroresModulos = misErroresGlobal.filter(e => e.cat_id == idCat && e.es_simulacion === false);
+            const erroresSimulacion = misErroresGlobal.filter(e => e.cat_id == idCat && e.es_simulacion === true);
+
+            if (erroresModulos.length > 0) {
+                contenedor.innerHTML += `
+                    <div class="bg-red-50 p-1 rounded-xl mb-3 shadow-sm border border-red-200">
+                        <button onclick="abrirZonaRefuerzo('${idCatRaw}', false, '${colorCat}', '${nombreSeguro}')" class="w-full bg-white py-3 px-4 rounded-lg hover:bg-red-100 transition text-left flex justify-between items-center">
+                            <div><p class="font-bold text-red-700">🚨 Repaso de Módulos</p><p class="text-xs font-bold text-red-500">${erroresModulos.length} fallas arrastrando</p></div>
+                            <span style="font-size: 1.5rem;">🧠</span>
+                        </button>
+                    </div>`;
+            }
+            if (erroresSimulacion.length > 0) {
+                contenedor.innerHTML += `
+                    <div class="bg-orange-50 p-1 rounded-xl mb-4 shadow-sm border border-orange-200">
+                        <button onclick="abrirZonaRefuerzo('${idCatRaw}', true, '${colorCat}', '${nombreSeguro}')" class="w-full bg-white py-3 px-4 rounded-lg hover:bg-orange-100 transition text-left flex justify-between items-center">
+                            <div><p class="font-bold text-orange-700">🚨 Repaso de Simulación Final</p><p class="text-xs font-bold text-orange-500">${erroresSimulacion.length} fallas arrastrando</p></div>
+                            <span style="font-size: 1.5rem;">🧠</span>
+                        </button>
+                    </div>`;
+            }
+
+            // LISTA DE MÓDULOS NORMALES
             const examenes = misCuestionariosGlobal.filter(c => (c.categoria_nombre || 'Módulo General') === nombreCat);
             examenes.forEach(c => {
                 const tituloSeguro = encodeURIComponent(c.titulo); const colorHex = c.categoria_color || '#64748b';
@@ -412,23 +442,41 @@
             });
         }
 
-        function abrirZonaRefuerzo() {
+        function abrirZonaRefuerzo(idCatRaw, isSim, colorCat, nombreSeguro) {
+            const nombreCat = decodeURIComponent(nombreSeguro);
+            const idCat = idCatRaw === 'null' ? null : idCatRaw;
+            const errores = misErroresGlobal.filter(e => e.cat_id == idCat && e.es_simulacion === isSim);
+            const tipoRepaso = isSim ? 'Simulación Final' : 'Módulos';
+            
             const contenedor = document.getElementById('contenedor-mis-examenes');
             contenedor.innerHTML = `
-                <button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver</button>
+                <button onclick="verExamenesDeCategoria('${nombreSeguro}', '${idCatRaw}', '${colorCat}')" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver</button>
                 <div class="bg-red-50 p-5 rounded-xl border border-red-200 shadow-sm text-left">
-                    <h3 class="text-xl font-bold text-red-700 mb-2">Simulador de Refuerzo</h3>
-                    <p class="text-gray-700 text-sm mb-4">Tienes <b>${misErroresGlobal.length} pregunta(s)</b> falladas. Se ha armado un bloque de hasta 15 preguntas. <b>Contesta este bloque 3 veces.</b> Si aciertas, se eliminarán de tus errores.</p>
-                    <button onclick="iniciarExamenRepaso()" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 shadow-md">▶ Iniciar Repaso</button>
+                    <h3 class="text-xl font-bold text-red-700 mb-2">Repaso de ${tipoRepaso}</h3>
+                    <p class="text-gray-700 text-sm mb-4">Tienes <b>${errores.length} pregunta(s)</b> falladas en esta categoría. Se ha armado un bloque de hasta 15 preguntas. <b>Contesta este bloque 3 veces.</b> Si aciertas, se eliminarán de tus errores.</p>
+                    <button onclick="iniciarExamenRepaso('${idCatRaw}', ${isSim}, '${nombreSeguro}')" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 shadow-md">▶ Iniciar Repaso</button>
                 </div>
             `;
         }
 
-        // ========================================================
-        // MOTOR DE EXÁMENES Y PAGINACIÓN
-        // ========================================================
+        async function iniciarExamenRepaso(catId, isSim, nombreSeguro) {
+            cuestionarioActualId = 'repaso'; esExamenDeRepaso = true; esSimulacionGlobal = false; esRepasoSimulacionGlobal = isSim; categoriaActualSimulacionId = catId;
+            const nombreCat = decodeURIComponent(nombreSeguro);
+            document.getElementById('titulo-examen-en-curso').innerText = '🚨 Repaso de Errores';
+            cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-gray-500">Armando bloque...</p>';
+
+            const res = await fetch(`/examen-repaso/${usuarioActualId}/${catId}/${isSim}`); const data = await res.json(); 
+            respuestasUsuario = {}; paginaActual = 0;
+            if (!data.preguntas || data.preguntas.length === 0) { Swal.fire('¡Felicidades!', 'Ya no tienes errores acumulados.', 'success'); return cargarMisExamenes(); }
+
+            examenActivo = mezclarArreglo(data.preguntas); 
+            examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
+            document.getElementById('titulo-examen-en-curso').innerText = `🚨 Repaso de ${isSim ? 'Simulación' : 'Módulos'} (${nombreCat}) - Intento ${data.intentoActual} de 3`;
+            renderizarExamenPaginado();
+        }
+
         async function iniciarExamen(id, tituloCodificado) {
-            cuestionarioActualId = id; esExamenDeRepaso = false; esSimulacionGlobal = false; categoriaActualSimulacionId = null;
+            cuestionarioActualId = id; esExamenDeRepaso = false; esSimulacionGlobal = false; esRepasoSimulacionGlobal = false; categoriaActualSimulacionId = null;
             document.getElementById('titulo-examen-en-curso').innerText = decodeURIComponent(tituloCodificado);
             cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
             
@@ -443,26 +491,11 @@
             renderizarExamenPaginado();
         }
 
-        async function iniciarExamenRepaso() {
-            cuestionarioActualId = 'repaso'; esExamenDeRepaso = true; esSimulacionGlobal = false; categoriaActualSimulacionId = null;
-            document.getElementById('titulo-examen-en-curso').innerText = '🚨 Repaso de Errores';
-            cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-gray-500">Armando...</p>';
-
-            const res = await fetch(`/examen-repaso/${usuarioActualId}`); const data = await res.json(); 
-            respuestasUsuario = {}; paginaActual = 0;
-            if (!data.preguntas || data.preguntas.length === 0) { Swal.fire('¡Felicidades!', 'Ya no tienes errores acumulados.', 'success'); return cargarMisExamenes(); }
-
-            examenActivo = mezclarArreglo(data.preguntas); 
-            examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
-            document.getElementById('titulo-examen-en-curso').innerText = `🚨 Repaso de Errores (Intento ${data.intentoActual} de 3)`;
-            renderizarExamenPaginado();
-        }
-
         async function iniciarSimulacionGeneral(catId, nombreSeguro) {
-            const confirmar = await Swal.fire({ title: '¿Iniciar Simulación Final?', text: "Te enfrentarás a todas las preguntas de esta materia con un reloj de 2 HORAS. Si el tiempo se agota, se enviará automáticamente.", icon: 'warning', showCancelButton: true, confirmButtonText: '¡Estoy listo!', cancelButtonText: 'Aún no', confirmButtonColor: '#eab308' });
+            const confirmar = await Swal.fire({ title: '¿Iniciar Simulación Final?', text: "Te enfrentarás a todas las preguntas de esta categoría con un reloj de 2 HORAS. Si el tiempo se agota, se enviará automáticamente.", icon: 'warning', showCancelButton: true, confirmButtonText: '¡Estoy listo!', cancelButtonText: 'Aún no', confirmButtonColor: '#eab308' });
             if(!confirmar.isConfirmed) return;
 
-            cuestionarioActualId = 'simulacion'; esExamenDeRepaso = false; esSimulacionGlobal = true; categoriaActualSimulacionId = catId;
+            cuestionarioActualId = 'simulacion'; esExamenDeRepaso = false; esSimulacionGlobal = true; esRepasoSimulacionGlobal = false; categoriaActualSimulacionId = catId;
             document.getElementById('titulo-examen-en-curso').innerText = `🎓 Simulación Final: ${decodeURIComponent(nombreSeguro)}`;
             cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center font-bold text-yellow-600">Revolviendo las preguntas... Prepárate.</p>';
 
@@ -480,16 +513,13 @@
 
         // --- SISTEMA DE PAGINACIÓN (10 en 10) ---
         function renderizarExamenPaginado() {
-            const contenedor = document.getElementById('contenedor-preguntas');
-            contenedor.innerHTML = '';
-            
+            const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '';
             const inicio = paginaActual * PREGUNTAS_POR_PAGINA;
             const fin = Math.min(inicio + PREGUNTAS_POR_PAGINA, examenActivo.length);
             const preguntasPagina = examenActivo.slice(inicio, fin);
 
             preguntasPagina.forEach((pregunta, index) => {
-                const numReal = inicio + index + 1;
-                let htmlOpciones = '';
+                const numReal = inicio + index + 1; let htmlOpciones = '';
                 pregunta.opciones.forEach(opcion => {
                     const checked = respuestasUsuario[pregunta.id] === parseInt(opcion.id) ? 'checked' : '';
                     htmlOpciones += `<label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition"><input type="radio" name="pregunta_${pregunta.id}" value="${opcion.id}" onchange="registrarRespuesta(${pregunta.id}, ${opcion.id})" class="w-5 h-5 text-slate-800 mr-3" ${checked}><span class="text-gray-700">${opcion.texto}</span></label>`;
@@ -498,32 +528,22 @@
             });
 
             let htmlBotones = '<div class="flex justify-between mt-6">';
-            if (paginaActual > 0) {
-                htmlBotones += `<button onclick="cambiarPagina(-1)" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition shadow-sm border border-gray-400">⬅ Anterior</button>`;
-            } else { htmlBotones += `<div></div>`; }
+            if (paginaActual > 0) { htmlBotones += `<button onclick="cambiarPagina(-1)" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition shadow-sm border border-gray-400">⬅ Anterior</button>`; } 
+            else { htmlBotones += `<div></div>`; }
 
-            if (fin < examenActivo.length) {
-                htmlBotones += `<button onclick="cambiarPagina(1)" class="bg-slate-800 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-700 transition shadow-sm">Siguiente ➡</button>`;
-            } else {
-                htmlBotones += `<button onclick="finalizarExamen(false)" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition shadow-lg text-lg">Finalizar y Calificar ✔</button>`;
-            }
+            if (fin < examenActivo.length) { htmlBotones += `<button onclick="cambiarPagina(1)" class="bg-slate-800 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-700 transition shadow-sm">Siguiente ➡</button>`; } 
+            else { htmlBotones += `<button onclick="finalizarExamen(false)" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition shadow-lg text-lg">Finalizar y Calificar ✔</button>`; }
             htmlBotones += '</div>';
 
             contenedor.innerHTML += htmlBotones;
         }
 
-        function cambiarPagina(delta) {
-            paginaActual += delta;
-            window.scrollTo(0, 0);
-            renderizarExamenPaginado();
-        }
-
+        function cambiarPagina(delta) { paginaActual += delta; window.scrollTo(0, 0); renderizarExamenPaginado(); }
         function registrarRespuesta(preguntaId, opcionId) { respuestasUsuario[preguntaId] = parseInt(opcionId); }
 
         // --- RELOJ ---
         function iniciarReloj() {
-            tiempoRestante = 7200; // 2 horas
-            document.getElementById('reloj-flotante').classList.remove('hidden'); actualizarTextoReloj();
+            tiempoRestante = 7200; document.getElementById('reloj-flotante').classList.remove('hidden'); actualizarTextoReloj();
             timerInterval = setInterval(() => {
                 tiempoRestante--; actualizarTextoReloj();
                 if (tiempoRestante <= 0) { clearInterval(timerInterval); Swal.fire('¡Tiempo Agotado!', 'Enviando respuestas...', 'info').then(() => { finalizarExamen(true); }); }
@@ -535,47 +555,21 @@
             if(tiempoRestante < 600) { document.getElementById('reloj-flotante').classList.replace('bg-slate-900', 'bg-red-600'); } 
         }
         function detenerReloj() { clearInterval(timerInterval); document.getElementById('reloj-flotante').classList.add('hidden'); document.getElementById('reloj-flotante').classList.replace('bg-red-600', 'bg-slate-900'); }
-
         function abandonarExamen() { detenerReloj(); cargarMisExamenes(); }
 
-        // --- VALIDACIÓN DE PREGUNTAS FALTANTES ---
+        // --- VALIDACIÓN Y CALIFICACIÓN ---
         async function finalizarExamen(forzado = false) {
             if (!forzado) {
                 let faltantes = [];
-                examenActivo.forEach((pregunta, index) => {
-                    if (!(pregunta.id in respuestasUsuario)) {
-                        faltantes.push(index + 1); // Guardamos el número exacto de la pregunta
-                    }
-                });
+                examenActivo.forEach((pregunta, index) => { if (!(pregunta.id in respuestasUsuario)) faltantes.push(index + 1); });
 
                 if (faltantes.length > 0) {
-                    let mensajeFaltantes = `Te faltan <b>${faltantes.length}</b> preguntas por contestar.<br><br>`;
-                    if (faltantes.length <= 15) {
-                        mensajeFaltantes += `<b>Revisa los números:</b> ${faltantes.join(', ')}`;
-                    } else {
-                        mensajeFaltantes += `<b>Revisa los números:</b> ${faltantes.slice(0, 15).join(', ')}... y más.`;
-                    }
-
-                    const confirmar = await Swal.fire({ 
-                        title: '¿Entregar examen incompleto?', 
-                        html: mensajeFaltantes, 
-                        icon: 'warning', 
-                        showCancelButton: true, 
-                        confirmButtonText: 'Sí, entregar así', 
-                        cancelButtonText: 'Volver a revisar',
-                        confirmButtonColor: '#ef4444'
-                    });
+                    let mensajeFaltantes = `Te faltan <b>${faltantes.length}</b> preguntas.<br><br>`;
+                    mensajeFaltantes += faltantes.length <= 15 ? `<b>Revisa los números:</b> ${faltantes.join(', ')}` : `<b>Revisa los números:</b> ${faltantes.slice(0, 15).join(', ')}... y más.`;
+                    const confirmar = await Swal.fire({ title: '¿Entregar examen incompleto?', html: mensajeFaltantes, icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, entregar así', cancelButtonText: 'Volver a revisar', confirmButtonColor: '#ef4444' });
                     if (!confirmar.isConfirmed) return;
                 } else {
-                    const confirmarOk = await Swal.fire({
-                        title: '¿Finalizar examen?',
-                        text: 'Has contestado todas las preguntas. ¿Deseas entregar?',
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, calificar',
-                        cancelButtonText: 'Revisar de nuevo',
-                        confirmButtonColor: '#22c55e'
-                    });
+                    const confirmarOk = await Swal.fire({ title: '¿Finalizar examen?', text: 'Has contestado todas las preguntas. ¿Deseas entregar?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, calificar', cancelButtonText: 'Revisar de nuevo', confirmButtonColor: '#22c55e' });
                     if (!confirmarOk.isConfirmed) return;
                 }
             }
@@ -602,7 +596,8 @@
                 body: JSON.stringify({ 
                     usuario_id: usuarioActualId, cuestionario_id: cuestionarioActualId, 
                     aciertos: aciertos, total: examenActivo.length, respuestas: respuestasUsuario, 
-                    es_repaso: esExamenDeRepaso, es_simulacion: esSimulacionGlobal, categoria_id: categoriaActualSimulacionId 
+                    es_repaso: esExamenDeRepaso, es_simulacion: esSimulacionGlobal, categoria_id: categoriaActualSimulacionId,
+                    repaso_de_simulacion: esRepasoSimulacionGlobal
                 }) 
             });
             
@@ -617,9 +612,6 @@
             const categorias = {};
             miHistorialGlobal.forEach(h => {
                 let nombreCat = h.categoria_nombre || 'Módulo General'; let colorCat = h.categoria_color || '#64748b';
-                if(h.es_repaso) { nombreCat = '🚨 Historial de Refuerzo'; colorCat = '#ef4444'; }
-                if(h.es_simulacion) { nombreCat = `🎓 Simulación Final: ${h.categoria_nombre}`; colorCat = '#eab308'; }
-
                 if(!categorias[nombreCat]) categorias[nombreCat] = { color: colorCat, cantidad: 0 };
                 categorias[nombreCat].cantidad++;
             });
@@ -639,12 +631,7 @@
             const contenedor = document.getElementById('contenedor-mi-historial');
             contenedor.innerHTML = `<button onclick="renderizarCategoriasHistorial()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver</button>`;
             
-            const historial = miHistorialGlobal.filter(h => { 
-                let catAsignada = h.categoria_nombre || 'Módulo General';
-                if(h.es_repaso) catAsignada = '🚨 Historial de Refuerzo';
-                if(h.es_simulacion) catAsignada = `🎓 Simulación Final: ${h.categoria_nombre}`;
-                return catAsignada === nombreCat; 
-            });
+            const historial = miHistorialGlobal.filter(h => { return (h.categoria_nombre || 'Módulo General') === nombreCat; });
             
             historial.forEach(h => {
                 const fechaObj = new Date(h.fecha.replace(' ', 'T') + 'Z'); const fechaBonita = fechaObj.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
