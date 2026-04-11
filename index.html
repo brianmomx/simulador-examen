@@ -54,11 +54,12 @@
             <h3 class="text-xl font-bold text-gray-800 mb-4 border-t pt-6 text-left">Mi Historial de Intentos</h3>
             <div id="contenedor-mi-historial" class="mb-8 space-y-2 max-h-60 overflow-y-auto"></div>
 
-            <button onclick="cerrarSesion()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg">Cerrar Sesión</button>
+            <button onclick="cerrarSesion()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg mt-4">Cerrar Sesión</button>
         </div>
 
         <div id="vista-admin" class="hidden text-center py-4">
             <h2 class="text-2xl font-bold mb-4">Panel de Administración</h2>
+            
             <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
                 <h3 class="font-bold text-slate-700 mb-2">1. Crear Nuevo Cuestionario</h3>
                 <div class="flex items-center gap-2 mb-3">
@@ -67,19 +68,32 @@
                 </div>
                 <button onclick="crearCuestionario()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">Guardar Cuestionario</button>
             </div>
-            <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
-                <h3 class="font-bold text-slate-700 mb-2">2. Gestionar Preguntas y Colores</h3>
-                <select id="lista-cuestionarios-editar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
-                <button onclick="abrirEditorPreguntas()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700">Editar Cuestionario</button>
+
+            <div class="bg-indigo-50 p-4 rounded-lg mb-4 border border-indigo-200 text-left">
+                <h3 class="font-bold text-indigo-800 mb-2">2. Asignar Color y Editar Nombre (Módulos Existentes)</h3>
+                <select id="lista-cuestionarios-color" class="w-full px-3 py-2 border rounded-lg mb-2 bg-white" onchange="cargarDatosColor()"></select>
+                <div class="flex items-center gap-2 mb-3">
+                    <input type="color" id="editar-solo-color" class="h-10 w-14 border rounded cursor-pointer p-1" title="Cambiar color">
+                    <input type="text" id="editar-solo-titulo" class="w-full px-3 py-2 border rounded-lg" placeholder="Nombre del módulo">
+                </div>
+                <button onclick="guardarColorRapido()" class="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700">Actualizar Color y Nombre</button>
             </div>
+
+            <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
+                <h3 class="font-bold text-slate-700 mb-2">3. Gestionar Preguntas</h3>
+                <select id="lista-cuestionarios-editar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
+                <button onclick="abrirEditorPreguntas()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700">Añadir o Borrar Preguntas</button>
+            </div>
+            
             <div class="bg-gray-50 p-4 rounded-lg mb-6 border text-left border-purple-200">
-                <h3 class="font-bold text-purple-700 mb-2">3. Habilitar Acceso</h3>
+                <h3 class="font-bold text-purple-700 mb-2">4. Habilitar Acceso a Alumnos</h3>
                 <select id="lista-alumnos-asignar" class="w-full px-3 py-2 border rounded-lg mb-2 bg-white"></select>
                 <select id="lista-cuestionarios-asignar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
                 <button onclick="asignarCuestionario()" class="w-full bg-purple-600 text-white font-bold py-2 rounded-lg hover:bg-purple-700">Otorgar Acceso</button>
             </div>
+
             <div class="bg-gray-50 p-4 rounded-lg mb-6 border text-left border-orange-200">
-                <h3 class="font-bold text-orange-700 mb-2">4. Reportes de Estudiantes</h3>
+                <h3 class="font-bold text-orange-700 mb-2">5. Reportes de Estudiantes</h3>
                 <button onclick="verReportes()" class="w-full bg-orange-500 text-white font-bold py-2 rounded-lg mb-3 hover:bg-orange-600">Ver Historial Completo</button>
                 <div id="tabla-reportes-container" class="hidden overflow-x-auto">
                     <table class="w-full text-sm text-left text-gray-600 border">
@@ -94,14 +108,9 @@
         </div>
 
         <div id="vista-editor" class="hidden py-2 text-left">
-            <p class="text-sm font-bold text-gray-500 mb-1">Nombre y color del simulador:</p>
-            <div class="flex items-center mb-4 border-b pb-4 gap-2">
-                <input type="color" id="input-editar-color" class="h-10 w-14 border rounded cursor-pointer p-1" title="Cambiar color">
-                <input type="text" id="input-editar-titulo" class="w-full text-xl font-bold text-gray-800 bg-transparent border-b border-dashed border-gray-400 focus:outline-none focus:border-emerald-500 py-1">
-                <button onclick="actualizarTituloCuestionario()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-700 whitespace-nowrap">Guardar</button>
-            </div>
+            <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2" id="titulo-cuestionario-activo">Cuestionario</h2>
             
-            <h3 class="font-bold text-sm text-gray-600 mt-2 mb-2">Preguntas en este cuestionario:</h3>
+            <h3 class="font-bold text-sm text-gray-600 mb-2">Preguntas en este simulador:</h3>
             <div id="contenedor-preguntas-existentes" class="mb-6 max-h-40 overflow-y-auto space-y-2 border-b pb-4 bg-gray-50 p-2 rounded"></div>
 
             <h3 class="font-bold text-emerald-700 mb-2 mt-4">Añadir Nueva Pregunta:</h3>
@@ -154,7 +163,7 @@
         let cuestionarioActualId = null;
         let examenActivo = []; 
         let respuestasUsuario = {}; 
-        let listaGlobalCuestionarios = []; // Memoria para saber los colores al editar
+        let listaGlobalCuestionarios = []; 
 
         function cambiarVista(vistaDestino) {
             const vistas = ['vista-login', 'vista-registro', 'vista-password', 'vista-dashboard', 'vista-admin', 'vista-editor', 'vista-hacer-examen', 'vista-resultados', 'vista-historial-detalle'];
@@ -208,41 +217,71 @@
             if(res.ok){ Swal.fire('¡Éxito!', 'Cuestionario creado', 'success'); document.getElementById('nuevo-cuestionario-titulo').value=''; cargarCuestionariosEnSelect(); } 
         }
 
+        // ========================================================
+        // NUEVAS FUNCIONES PARA EL GESTOR RÁPIDO DE COLORES
+        // ========================================================
         async function cargarCuestionariosEnSelect() {
             const res = await fetch('/cuestionarios'); 
             listaGlobalCuestionarios = await res.json();
-            const sE = document.getElementById('lista-cuestionarios-editar'); 
-            const sA = document.getElementById('lista-cuestionarios-asignar');
-            sE.innerHTML = '<option value="">Selecciona...</option>'; 
-            sA.innerHTML = '<option value="">Selecciona...</option>';
+            
+            const sColor = document.getElementById('lista-cuestionarios-color'); // Select de colores
+            const sEditar = document.getElementById('lista-cuestionarios-editar'); // Select de preguntas
+            const sAsignar = document.getElementById('lista-cuestionarios-asignar'); // Select de asignar
+            
+            sColor.innerHTML = '<option value="">Selecciona un módulo...</option>';
+            sEditar.innerHTML = '<option value="">Selecciona un módulo...</option>'; 
+            sAsignar.innerHTML = '<option value="">Selecciona un módulo...</option>';
+            
             listaGlobalCuestionarios.forEach(c => { 
-                sE.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; 
-                sA.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; 
+                sColor.innerHTML += `<option value="${c.id}">${c.titulo}</option>`;
+                sEditar.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; 
+                sAsignar.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; 
             });
         }
+
+        function cargarDatosColor() {
+            const id = document.getElementById('lista-cuestionarios-color').value;
+            if(!id) {
+                document.getElementById('editar-solo-titulo').value = '';
+                document.getElementById('editar-solo-color').value = '#3b82f6';
+                return;
+            }
+            // Busca el cuestionario en la memoria global y copia sus datos a las casillas
+            const cuestionario = listaGlobalCuestionarios.find(c => c.id == id);
+            document.getElementById('editar-solo-titulo').value = cuestionario.titulo;
+            document.getElementById('editar-solo-color').value = cuestionario.color || '#3b82f6';
+        }
+
+        async function guardarColorRapido() {
+            const id = document.getElementById('lista-cuestionarios-color').value;
+            const titulo = document.getElementById('editar-solo-titulo').value;
+            const color = document.getElementById('editar-solo-color').value;
+            
+            if(!id) return Swal.fire('Ojo','Primero selecciona un cuestionario de la lista.','warning');
+            if(!titulo) return Swal.fire('Error','El nombre no puede estar vacío.','error');
+
+            const res = await fetch(`/editar-cuestionario/${id}`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ titulo: titulo, color: color }) 
+            });
+
+            if(res.ok) {
+                Swal.fire({ title: '¡Color guardado!', icon: 'success', timer: 1200, showConfirmButton: false });
+                cargarCuestionariosEnSelect(); // Recarga la lista para aplicar cambios
+                document.getElementById('editar-solo-titulo').value = '';
+                document.getElementById('lista-cuestionarios-color').value = '';
+            }
+        }
+        // ========================================================
 
         function abrirEditorPreguntas() {
             const s = document.getElementById('lista-cuestionarios-editar'); const id = s.value;
             if(!id) return Swal.fire('Ojo','Selecciona un cuestionario.','warning');
             cuestionarioActualId = id;
-            
-            const cuestionarioSeleccionado = listaGlobalCuestionarios.find(c => c.id == id);
-            document.getElementById('input-editar-titulo').value = cuestionarioSeleccionado.titulo;
-            document.getElementById('input-editar-color').value = cuestionarioSeleccionado.color || '#3b82f6';
-            
+            document.getElementById('titulo-cuestionario-activo').innerText = `Gestor de Preguntas: ${s.options[s.selectedIndex].text}`;
             cargarPreguntasExistentes(); 
             cambiarVista('vista-editor');
-        }
-
-        async function actualizarTituloCuestionario() {
-            const nuevoTitulo = document.getElementById('input-editar-titulo').value;
-            const nuevoColor = document.getElementById('input-editar-color').value;
-            if(!nuevoTitulo) return Swal.fire('Error', 'El título no puede estar vacío', 'error');
-            const res = await fetch(`/editar-cuestionario/${cuestionarioActualId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo: nuevoTitulo, color: nuevoColor }) });
-            if(res.ok) {
-                Swal.fire({ title: '¡Actualizado!', icon: 'success', timer: 1000, showConfirmButton: false });
-                cargarCuestionariosEnSelect(); 
-            }
         }
 
         async function cargarPreguntasExistentes() {
@@ -306,9 +345,6 @@
             return arreglo;
         }
 
-        // ==========================================
-        // DISEÑO A COLOR DE LOS BOTONES
-        // ==========================================
         async function cargarMisExamenes() {
             const res = await fetch(`/mis-cuestionarios/${usuarioActualId}`); const cuestionarios = await res.json();
             const contenedor = document.getElementById('contenedor-mis-examenes'); contenedor.innerHTML = '';
@@ -316,9 +352,8 @@
             else { 
                 cuestionarios.forEach(c => { 
                     const tituloSeguro = encodeURIComponent(c.titulo);
-                    const colorHex = c.color || '#3b82f6'; // Si no tiene color guardado, usa el azul clásico
+                    const colorHex = c.color || '#3b82f6';
                     
-                    // Aquí programamos la "magia" del color en el HTML del botón
                     contenedor.innerHTML += `
                         <button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" 
                                 class="w-full bg-white font-bold py-3 px-4 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border" 
@@ -347,7 +382,7 @@
                     const porcentaje = h.aciertos / h.total_preguntas;
                     const calificacionDecimal = (porcentaje * 10).toFixed(1);
                     const colorNota = porcentaje >= 0.6 ? 'text-green-600' : 'text-red-500';
-                    const colorHex = h.color || '#3b82f6'; // Color del módulo en el historial
+                    const colorHex = h.color || '#3b82f6'; 
 
                     contenedor.innerHTML += `
                         <div onclick="verDetalleIntento(${h.id}, ${h.aciertos}, ${h.total_preguntas}, '${calificacionDecimal}')" 
