@@ -232,6 +232,7 @@
         }
 
         function cerrarSesion() { usuarioActualId = null; detenerReloj(); cambiarVista('vista-login'); }
+        
         async function actualizarPassword() {
             const usuario = document.getElementById('pass-usuario').value; const nuevaPassword = document.getElementById('pass-nueva').value;
             if (!usuario || !nuevaPassword) return Swal.fire('Error', 'Llena todos los campos', 'error');
@@ -256,14 +257,9 @@
         async function cargarCategorias() {
             const res = await fetch('/categorias'); listaGlobalCategorias = await res.json();
             const sNuevo = document.getElementById('select-categoria-nuevo'); const sEditar = document.getElementById('select-categoria-editar'); const sReset = document.getElementById('lista-categorias-reset');
-            
             let opcionesHTML = '<option value="">Sin categoría (Gris por defecto)</option>';
             let opcionesResetHTML = '<option value="all">⚠️ TODAS LAS CATEGORÍAS (Reset Total)</option>';
-            
-            listaGlobalCategorias.forEach(cat => { 
-                opcionesHTML += `<option value="${cat.id}">${cat.nombre}</option>`; 
-                opcionesResetHTML += `<option value="${cat.id}">${cat.nombre}</option>`; 
-            });
+            listaGlobalCategorias.forEach(cat => { opcionesHTML += `<option value="${cat.id}">${cat.nombre}</option>`; opcionesResetHTML += `<option value="${cat.id}">${cat.nombre}</option>`; });
             sNuevo.innerHTML = opcionesHTML; sEditar.innerHTML = opcionesHTML; sReset.innerHTML = opcionesResetHTML;
         }
 
@@ -343,9 +339,6 @@
             if(res.ok){ Swal.fire({ title: 'Acceso otorgado', icon: 'success', timer: 1000, showConfirmButton: false }); } else { Swal.fire('Error', data.error, 'error'); } 
         }
 
-        // ==============================================
-        // NUEVAS FUNCIONES DE ADMIN (REPORTES COMPACTOS)
-        // ==============================================
         async function verReportes() {
             const res = await fetch('/reportes'); const reportes = await res.json();
             const contenedor = document.getElementById('contenedor-reportes-agrupados'); contenedor.innerHTML = '';
@@ -452,7 +445,7 @@
         }
 
         // ========================================================
-        // INTERFAZ DEL ALUMNO Y EXÁMENES PAGINADOS
+        // INTERFAZ DEL ALUMNO CON CONTEO DE INTENTOS
         // ========================================================
         async function cargarMisExamenes() {
             detenerReloj(); 
@@ -492,10 +485,19 @@
             const nombreCat = decodeURIComponent(nombreSeguro); const contenedor = document.getElementById('contenedor-mis-examenes'); const idCat = idCatRaw === 'null' ? null : idCatRaw;
             contenedor.innerHTML = `<button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver a Categorías</button>`;
             
+            // Calculamos intentos de Simulación Final buscando en el Historial Global
+            const nombreBusqueda = nombreCat === 'Módulo General' ? '🎓 SIMULACIÓN FINAL' : `🎓 Simulación Final: ${nombreCat}`;
+            const intentosSim = miHistorialGlobal.filter(h => h.es_simulacion === true && (h.categoria_nombre === nombreBusqueda || h.categoria_nombre === nombreCat)).length;
+            const badgeSimHTML = intentosSim > 0 ? `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-green-100 text-green-700 border border-green-200">✅ Realizado: ${intentosSim} vez/veces</span>` : `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-yellow-100 text-yellow-700 border border-yellow-200">⏳ Sin intentar</span>`;
+
             contenedor.innerHTML += `
                 <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 p-1 rounded-xl mb-4 shadow-lg">
                     <button onclick="iniciarSimulacionGeneral('${idCatRaw}', '${nombreSeguro}')" class="w-full bg-white py-4 px-4 rounded-lg hover:bg-yellow-50 transition text-left flex justify-between items-center">
-                        <div class="flex items-center gap-3"><div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-2xl shadow-sm bg-yellow-500">🎓</div><div><p class="font-bold text-gray-800 text-lg">Simulación Final: ${nombreCat}</p><p class="text-sm font-bold text-yellow-600">⏱️ 2 Horas</p></div></div><span style="color: #eab308; font-size: 1.5rem;">🏆</span>
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-2xl shadow-sm bg-yellow-500">🎓</div>
+                            <div><p class="font-bold text-gray-800 text-lg">Simulación Final: ${nombreCat}</p><p class="text-sm font-bold text-yellow-600 mb-1">⏱️ 2 Horas</p>${badgeSimHTML}</div>
+                        </div>
+                        <span style="color: #eab308; font-size: 1.5rem;">🏆</span>
                     </button>
                 </div>
             `;
@@ -523,9 +525,20 @@
             const examenes = misCuestionariosGlobal.filter(c => (c.categoria_nombre || 'Módulo General') === nombreCat);
             examenes.forEach(c => {
                 const tituloSeguro = encodeURIComponent(c.titulo); const colorHex = c.categoria_color || '#64748b';
+                
+                // NUEVA ETIQUETA DE INTENTOS
+                const intentosNum = parseInt(c.cantidad_intentos) || 0;
+                const badgeHTML = intentosNum > 0 
+                    ? `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-green-100 text-green-700 border border-green-200">✅ Realizado: ${intentosNum} vez/veces</span>` 
+                    : `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-gray-100 text-gray-500 border border-gray-200">⏳ Sin intentar</span>`;
+
                 contenedor.innerHTML += `
                     <button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" class="w-full bg-white py-3 px-4 mb-3 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border" style="border-left-width: 6px; border-left-color: ${colorHex};">
-                        <div><p class="font-bold text-gray-800">📝 ${c.titulo}</p></div><span style="color: ${colorHex}; opacity: 0.8; font-size: 1.5rem;">▶</span>
+                        <div>
+                            <p class="font-bold text-gray-800">📝 ${c.titulo}</p>
+                            ${badgeHTML}
+                        </div>
+                        <span style="color: ${colorHex}; opacity: 0.8; font-size: 1.5rem;">▶</span>
                     </button>`; 
             });
         }
@@ -590,7 +603,6 @@
             iniciarReloj(); renderizarExamenPaginado();
         }
 
-        // --- SISTEMA DE PAGINACIÓN ---
         function renderizarExamenPaginado() {
             const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '';
             const inicio = paginaActual * PREGUNTAS_POR_PAGINA; const fin = Math.min(inicio + PREGUNTAS_POR_PAGINA, examenActivo.length);
@@ -612,14 +624,12 @@
             if (fin < examenActivo.length) { htmlBotones += `<button onclick="cambiarPagina(1)" class="bg-slate-800 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-700 transition shadow-sm">Siguiente ➡</button>`; } 
             else { htmlBotones += `<button onclick="finalizarExamen(false)" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition shadow-lg text-lg">Finalizar y Calificar ✔</button>`; }
             htmlBotones += '</div>';
-
             contenedor.innerHTML += htmlBotones;
         }
 
         function cambiarPagina(delta) { paginaActual += delta; window.scrollTo(0, 0); renderizarExamenPaginado(); }
         function registrarRespuesta(preguntaId, opcionId) { respuestasUsuario[preguntaId] = parseInt(opcionId); }
 
-        // --- RELOJ ---
         function iniciarReloj() {
             tiempoRestante = 7200; document.getElementById('reloj-flotante').classList.remove('hidden'); actualizarTextoReloj();
             timerInterval = setInterval(() => {
@@ -635,7 +645,6 @@
         function detenerReloj() { clearInterval(timerInterval); document.getElementById('reloj-flotante').classList.add('hidden'); document.getElementById('reloj-flotante').classList.replace('bg-red-600', 'bg-slate-900'); }
         function abandonarExamen() { detenerReloj(); cargarMisExamenes(); }
 
-        // --- VALIDACIÓN DE PREGUNTAS FALTANTES ---
         async function finalizarExamen(forzado = false) {
             if (!forzado) {
                 let faltantes = [];
