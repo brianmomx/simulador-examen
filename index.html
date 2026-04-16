@@ -535,7 +535,11 @@
                 categorias[nombreCat].cantidad++;
             });
 
-            for (const [nombre, datos] of Object.entries(categorias)) {
+            // Extraemos los nombres de las categorías y los ordenamos alfabética y numéricamente
+            const nombresOrdenados = Object.keys(categorias).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+            nombresOrdenados.forEach(nombre => {
+                const datos = categorias[nombre];
                 const nombreSeguro = encodeURIComponent(nombre);
                 contenedor.innerHTML += `
                     <button onclick="verExamenesDeCategoria('${nombreSeguro}', '${datos.id}', '${datos.color}')" class="w-full bg-white py-4 px-4 rounded-xl hover:shadow-md transition shadow-sm text-left flex justify-between items-center border-2" style="border-color: ${datos.color}30; background-color: ${datos.color}05;">
@@ -546,7 +550,7 @@
                         <span style="color: ${datos.color}; font-size: 1.5rem;">📁</span>
                     </button>
                 `;
-            }
+            });
         }
 
         function verExamenesDeCategoria(nombreSeguro, idCatRaw, colorCat) {
@@ -590,6 +594,10 @@
             }
 
             const examenes = misCuestionariosGlobal.filter(c => (c.categoria_nombre || 'Módulo General') === nombreCat);
+            
+            // Ordenamos los exámenes alfabética y numéricamente por su título
+            examenes.sort((a, b) => a.titulo.localeCompare(b.titulo, undefined, { numeric: true, sensitivity: 'base' }));
+
             examenes.forEach(c => {
                 const tituloSeguro = encodeURIComponent(c.titulo); const colorHex = c.categoria_color || '#64748b';
                 const intentosNum = parseInt(c.cantidad_intentos) || 0;
@@ -674,11 +682,16 @@
 
             preguntasPagina.forEach((pregunta, index) => {
                 const numReal = inicio + index + 1; let htmlOpciones = '';
+                
+                // Formateador automático para listas numéricas dentro del texto
+                let textoFormateado = pregunta.texto.replace(/ (\d+\.) /g, '<br><br><b class="text-slate-800">$1</b> ');
+
                 pregunta.opciones.forEach(opcion => {
                     const checked = respuestasUsuario[pregunta.id] === parseInt(opcion.id) ? 'checked' : '';
                     htmlOpciones += `<label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition"><input type="radio" name="pregunta_${pregunta.id}" value="${opcion.id}" onchange="registrarRespuesta(${pregunta.id}, ${opcion.id})" class="w-5 h-5 text-slate-800 mr-3" ${checked}><span class="text-gray-700">${opcion.texto}</span></label>`;
                 });
-                contenedor.innerHTML += `<div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm"><p class="font-bold text-gray-800 mb-4"><span class="text-slate-800">${numReal}.</span> ${pregunta.texto}</p><div class="space-y-2">${htmlOpciones}</div></div>`;
+                
+                contenedor.innerHTML += `<div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm"><p class="font-bold text-gray-800 mb-4"><span class="text-slate-800">${numReal}.</span> ${textoFormateado}</p><div class="space-y-2">${htmlOpciones}</div></div>`;
             });
 
             let htmlBotones = '<div class="flex justify-between mt-6">';
@@ -733,7 +746,10 @@
                 const opcionCorrecta = pregunta.opciones.find(o => o.es_correcta === 1); const opcionElegida = pregunta.opciones.find(o => o.id === idSeleccionado);
                 let esCorrecto = false; if (opcionElegida && opcionElegida.es_correcta === 1) { aciertos++; esCorrecto = true; }
 
-                desgloseHTML += `<div class="p-4 rounded-lg border ${esCorrecto ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}"><p class="font-semibold text-gray-800 mb-1">${index + 1}. ${pregunta.texto}</p>${esCorrecto ? `<p class="text-sm text-green-700">✅ <b>Correcto:</b> ${opcionCorrecta.texto}</p>` : `<p class="text-sm text-red-700 mb-1">❌ <b>Tu respuesta:</b> ${opcionElegida ? opcionElegida.texto : '<i>Sin contestar</i>'}</p><p class="text-sm text-green-700">💡 <b>Respuesta correcta:</b> ${opcionCorrecta.texto}</p>`}</div>`;
+                // Formateador automático para listas numéricas dentro del texto
+                let textoFormateado = pregunta.texto.replace(/ (\d+\.) /g, '<br><br><b class="text-slate-800">$1</b> ');
+
+                desgloseHTML += `<div class="p-4 rounded-lg border ${esCorrecto ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}"><p class="font-semibold text-gray-800 mb-1">${index + 1}. ${textoFormateado}</p>${esCorrecto ? `<p class="text-sm text-green-700">✅ <b>Correcto:</b> ${opcionCorrecta.texto}</p>` : `<p class="text-sm text-red-700 mb-1">❌ <b>Tu respuesta:</b> ${opcionElegida ? opcionElegida.texto : '<i>Sin contestar</i>'}</p><p class="text-sm text-green-700">💡 <b>Respuesta correcta:</b> ${opcionCorrecta.texto}</p>`}</div>`;
             });
 
             document.getElementById('texto-calificacion').innerText = `${aciertos} / ${examenActivo.length}`;
@@ -815,7 +831,11 @@
                 let desgloseHTML = '';
                 detalles.forEach((d, index) => {
                     const esCorrecto = d.es_correcta === 1;
-                    desgloseHTML += `<div class="p-4 rounded-lg border ${esCorrecto ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}"><p class="font-semibold text-gray-800 mb-1">${index + 1}. ${d.texto_pregunta}</p>${esCorrecto ? `<p class="text-sm text-green-700">✅ <b>Correcto:</b> ${d.opcion_correcta}</p>` : `<p class="text-sm text-red-700 mb-1">❌ <b>Tu respuesta:</b> ${d.opcion_elegida ? d.opcion_elegida : '<i>Sin contestar</i>'}</p><p class="text-sm text-green-700">💡 <b>Respuesta correcta:</b> ${d.opcion_correcta}</p>`}</div>`;
+                    
+                    // Formateador automático para listas numéricas en los resultados del historial
+                    let textoFormateado = d.texto_pregunta.replace(/ (\d+\.) /g, '<br><br><b class="text-slate-800">$1</b> ');
+
+                    desgloseHTML += `<div class="p-4 rounded-lg border ${esCorrecto ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}"><p class="font-semibold text-gray-800 mb-1">${index + 1}. ${textoFormateado}</p>${esCorrecto ? `<p class="text-sm text-green-700">✅ <b>Correcto:</b> ${d.opcion_correcta}</p>` : `<p class="text-sm text-red-700 mb-1">❌ <b>Tu respuesta:</b> ${d.opcion_elegida ? d.opcion_elegida : '<i>Sin contestar</i>'}</p><p class="text-sm text-green-700">💡 <b>Respuesta correcta:</b> ${d.opcion_correcta}</p>`}</div>`;
                 });
                 document.getElementById('historial-contenedor-desglose').innerHTML = desgloseHTML;
                 cambiarVista('vista-historial-detalle');
