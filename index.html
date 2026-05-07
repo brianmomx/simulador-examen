@@ -9,9 +9,10 @@
     <style>
         @media print {
             body * { visibility: hidden; }
-            #vista-resultados, #vista-resultados * { visibility: visible; }
-            #vista-resultados { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
-            #contenedor-desglose { max-height: none !important; overflow: visible !important; }
+            #vista-resultados, #vista-resultados *,
+            #vista-historial-detalle, #vista-historial-detalle * { visibility: visible; }
+            #vista-resultados, #vista-historial-detalle { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
+            #contenedor-desglose, #historial-contenedor-desglose { max-height: none !important; overflow: visible !important; }
             .no-imprimir { display: none !important; }
         }
     </style>
@@ -203,7 +204,13 @@
             </div>
             <h3 class="font-bold text-left text-gray-700 mb-4 border-b pb-1">Tus respuestas en este intento:</h3>
             <div id="historial-contenedor-desglose" class="text-left space-y-4 mb-8 max-h-96 overflow-y-auto pr-2"></div>
-            <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mi zona de estudio</button>
+            <div class="flex flex-col gap-3 no-imprimir">
+                <button onclick="guardarHistorialPDF()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-500 shadow-lg flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+                    Guardar resultados como PDF
+                </button>
+                <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mi zona de estudio</button>
+            </div>
         </div>
 
     </div>
@@ -785,6 +792,12 @@
 
         function guardarResultadosPDF() {
             document.title = `Resultados - ${document.getElementById('texto-calificacion').innerText} - ${new Date().toLocaleDateString('es-MX')}`;
+            window.print();
+            document.title = 'Plataforma de Evaluaciones';
+        }
+
+        function guardarHistorialPDF() {
+            document.title = `Historial - ${document.getElementById('historial-texto-calificacion').innerText} - ${new Date().toLocaleDateString('es-MX')}`;
             window.print();
             document.title = 'Plataforma de Evaluaciones';
         }
