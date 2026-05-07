@@ -6,19 +6,14 @@
     <title>Plataforma de Evaluaciones</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        @media print {
-            body * { visibility: hidden; }
-            #vista-resultados, #vista-resultados * { visibility: visible; }
-            #vista-resultados { position: absolute; left: 0; top: 0; width: 100%; padding: 24px; }
-            #contenedor-desglose { max-height: none !important; overflow: visible !important; }
-            .no-imprimir { display: none !important; }
-        }
-    </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen font-sans p-4">
 
-    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-2xl my-8">
+    <div id="reloj-flotante" class="fixed top-4 right-4 bg-slate-900 text-white font-mono font-bold px-5 py-2 rounded-full shadow-2xl text-xl z-50 border-2 border-yellow-400 hidden flex items-center gap-2">
+        <span>⏱️</span> <span id="reloj-texto">02:00:00</span>
+    </div>
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-2xl my-8 relative">
         
         <div id="vista-login">
             <h2 class="text-2xl font-bold text-gray-800 text-center mb-6">Iniciar Sesión</h2>
@@ -55,102 +50,145 @@
         </div>
 
         <div id="vista-dashboard" class="hidden text-center py-6">
-            <div class="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>
+            <div class="w-16 h-16 bg-slate-800 text-white rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></div>
             <h2 class="text-3xl font-bold mb-2">Zona de Estudio</h2>
-            <p id="texto-bienvenida-alumno" class="text-gray-600 mb-6">Tus simuladores disponibles:</p>
+            <p id="texto-bienvenida-alumno" class="text-gray-600 mb-6">Tus carpetas de estudio:</p>
             <div id="contenedor-mis-examenes" class="mb-8 space-y-3"></div>
-            <button onclick="cerrarSesion()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg">Cerrar Sesión</button>
+            <h3 class="text-xl font-bold text-gray-800 mb-4 border-t pt-6 text-left">Mi Historial de Intentos</h3>
+            <div id="contenedor-mi-historial" class="mb-8 space-y-2 max-h-80 overflow-y-auto"></div>
+            <button onclick="cerrarSesion()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg mt-4 hover:bg-red-600 transition">Cerrar Sesión</button>
         </div>
 
         <div id="vista-admin" class="hidden text-center py-4">
-            <h2 class="text-2xl font-bold mb-4">Panel de Administración</h2>
+            <h2 class="text-2xl font-bold mb-6">Panel de Administración</h2>
             
-            <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
-                <h3 class="font-bold text-slate-700 mb-2">1. Crear Nuevo Cuestionario</h3>
-                <input type="text" id="nuevo-cuestionario-titulo" class="w-full px-3 py-2 border rounded-lg mb-3">
-                <button onclick="crearCuestionario()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">Guardar Cuestionario</button>
+            <div class="bg-indigo-50 p-4 rounded-lg mb-4 border border-indigo-200 text-left">
+                <h3 class="font-bold text-indigo-800 mb-2">1. Crear Nueva Categoría (Materia)</h3>
+                <div class="flex items-center gap-2 mb-3">
+                    <input type="color" id="nueva-categoria-color" value="#3b82f6" class="h-10 w-14 border rounded cursor-pointer p-1">
+                    <input type="text" id="nueva-categoria-nombre" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Ej. Examen Profesional A">
+                </div>
+                <button onclick="crearCategoria()" class="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700">Guardar Categoría</button>
             </div>
             
             <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
-                <h3 class="font-bold text-slate-700 mb-2">2. Gestionar Preguntas</h3>
-                <select id="lista-cuestionarios-editar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
-                <button onclick="abrirEditorPreguntas()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700">Editar Cuestionario</button>
+                <h3 class="font-bold text-slate-700 mb-2">2. Crear Nuevo Cuestionario</h3>
+                <input type="text" id="nuevo-cuestionario-titulo" class="w-full px-3 py-2 border rounded-lg mb-2" placeholder="Nombre del módulo">
+                <select id="select-categoria-nuevo" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
+                <button onclick="crearCuestionario()" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700">Crear Cuestionario</button>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-4 border border-slate-300 text-left">
+                <h3 class="font-bold text-slate-700 mb-2">3. Configurar Módulos (Editar / Eliminar)</h3>
+                <select id="lista-cuestionarios-editar-datos" class="w-full px-3 py-2 border rounded-lg mb-2 bg-white" onchange="cargarDatosEdicionRapida()"></select>
+                <input type="text" id="editar-solo-titulo" class="w-full px-3 py-2 border rounded-lg mb-2" placeholder="Nombre del módulo">
+                <select id="select-categoria-editar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
+                <div class="flex gap-2">
+                    <button onclick="guardarEdicionCuestionario()" class="w-2/3 bg-slate-800 text-white font-bold py-2 rounded-lg hover:bg-slate-700">Actualizar Datos</button>
+                    <button onclick="eliminarCuestionario()" class="w-1/3 bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700">🗑️ Borrar</button>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-lg mb-4 border text-left">
+                <h3 class="font-bold text-emerald-700 mb-2">4. Gestionar Preguntas</h3>
+                <select id="lista-cuestionarios-preguntas" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
+                <button onclick="abrirEditorPreguntas()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg hover:bg-emerald-700">Abrir Gestor</button>
             </div>
             
             <div class="bg-gray-50 p-4 rounded-lg mb-6 border text-left border-purple-200">
-                <h3 class="font-bold text-purple-700 mb-2">3. Habilitar Acceso</h3>
+                <h3 class="font-bold text-purple-700 mb-2">5. Habilitar Acceso</h3>
                 <select id="lista-alumnos-asignar" class="w-full px-3 py-2 border rounded-lg mb-2 bg-white"></select>
                 <select id="lista-cuestionarios-asignar" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
                 <button onclick="asignarCuestionario()" class="w-full bg-purple-600 text-white font-bold py-2 rounded-lg hover:bg-purple-700">Otorgar Acceso</button>
             </div>
 
             <div class="bg-gray-50 p-4 rounded-lg mb-6 border text-left border-orange-200">
-                <h3 class="font-bold text-orange-700 mb-2">4. Reportes de Estudiantes</h3>
-                <button onclick="verReportes()" class="w-full bg-orange-500 text-white font-bold py-2 rounded-lg mb-3 hover:bg-orange-600">Ver Historial Completo</button>
-                
-                <div id="tabla-reportes-container" class="hidden overflow-x-auto">
-                    <table class="w-full text-sm text-left text-gray-600 border">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-200">
-                            <tr>
-                                <th class="px-3 py-2 border">Alumno</th>
-                                <th class="px-3 py-2 border">Examen</th>
-                                <th class="px-3 py-2 border text-center">Aciertos</th>
-                                <th class="px-3 py-2 border text-center">Calificación</th>
-                                <th class="px-3 py-2 border">Fecha (CDMX)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cuerpo-tabla-reportes" class="bg-white">
-                            </tbody>
-                    </table>
+                <h3 class="font-bold text-orange-700 mb-2">6. Reportes Globales (Historial)</h3>
+                <p class="text-xs text-gray-600 mb-3">Expande el nombre del alumno para ver sus calificaciones.</p>
+                <button onclick="verReportes()" class="w-full bg-orange-500 text-white font-bold py-2 rounded-lg mb-3 hover:bg-orange-600">Cargar y Actualizar Reportes</button>
+                <div id="tabla-reportes-container" class="hidden">
+                    <div id="contenedor-reportes-agrupados" class="space-y-2"></div>
                 </div>
             </div>
 
-            <button onclick="cerrarSesion()" class="w-full bg-red-500 text-white font-bold py-2 rounded-lg hover:bg-red-600">Cerrar Sesión</button>
+            <div class="bg-red-50 p-4 rounded-lg mb-6 border text-left border-red-200">
+                <h3 class="font-bold text-red-700 mb-2">7. Análisis de Errores por Alumno</h3>
+                <select id="lista-alumnos-errores" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
+                <button onclick="verErroresAdmin()" class="w-full bg-red-600 text-white font-bold py-2 rounded-lg mb-3 hover:bg-red-700">Ver Preguntas Falladas</button>
+                <div id="contenedor-errores-admin" class="hidden max-h-80 overflow-y-auto space-y-4 bg-white p-3 border rounded"></div>
+            </div>
+
+            <div class="bg-teal-50 p-4 rounded-lg mb-6 border text-left border-teal-200">
+                <h3 class="font-bold text-teal-800 mb-2">8. Gestión de Cuentas de Usuario</h3>
+                <select id="lista-usuarios-gestion" class="w-full px-3 py-2 border rounded-lg mb-3 bg-white"></select>
+                <div class="flex gap-2">
+                    <button onclick="cambiarPasswordUsuario()" class="w-1/2 bg-teal-600 text-white font-bold py-2 rounded-lg hover:bg-teal-700 text-sm">Cambiar Password</button>
+                    <button onclick="eliminarUsuario()" class="w-1/2 bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700 text-sm">Eliminar Cuenta</button>
+                </div>
+            </div>
+
+            <div class="bg-rose-50 p-4 rounded-lg mb-6 border text-left border-rose-300 shadow-sm">
+                <h3 class="font-bold text-rose-800 mb-2">9. Resetear Historial de Alumno</h3>
+                <p class="text-xs text-rose-600 mb-3">Borra los intentos previos de un alumno. Acción protegida con contraseña.</p>
+                <select id="lista-alumnos-reset" class="w-full px-3 py-2 border border-rose-300 rounded-lg mb-2 bg-white"></select>
+                <select id="lista-categorias-reset" class="w-full px-3 py-2 border border-rose-300 rounded-lg mb-3 bg-white">
+                    <option value="all">⚠️ TODAS LAS CATEGORÍAS (Reset Total)</option>
+                </select>
+                <button onclick="resetearHistorial()" class="w-full bg-rose-600 text-white font-bold py-2 rounded-lg hover:bg-rose-700">Ejecutar Reset</button>
+            </div>
+
+            <button onclick="cerrarSesion()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg hover:bg-slate-900 mt-4">Cerrar Sesión</button>
         </div>
 
         <div id="vista-editor" class="hidden py-2 text-left">
-            <h2 class="text-xl font-bold text-gray-800 mb-1 border-b pb-2" id="titulo-cuestionario-activo">Cuestionario</h2>
-            
-            <h3 class="font-bold text-sm text-gray-600 mt-4 mb-2">Preguntas en este cuestionario:</h3>
+            <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2" id="titulo-cuestionario-activo">Cuestionario</h2>
+            <h3 class="font-bold text-sm text-gray-600 mb-2">Preguntas en este simulador:</h3>
             <div id="contenedor-preguntas-existentes" class="mb-6 max-h-40 overflow-y-auto space-y-2 border-b pb-4 bg-gray-50 p-2 rounded"></div>
-
-            <h3 class="font-bold text-emerald-700 mb-2 mt-4">Añadir Nueva Pregunta:</h3>
-            <div class="mb-4">
-                <textarea id="texto-pregunta" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500" rows="3" placeholder="¿Cuál es la pregunta?"></textarea>
-            </div>
+            
+            <h3 class="font-bold text-emerald-700 mb-2 mt-4" id="titulo-formulario-pregunta">➕ Añadir Nueva Pregunta:</h3>
+            <div class="mb-4"><textarea id="texto-pregunta" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500" rows="3" placeholder="¿Cuál es la pregunta?"></textarea></div>
             <p class="text-sm font-bold text-gray-700 mb-2">Opciones (marca la correcta 🔘):</p>
             <div class="flex items-center mb-2"><input type="radio" name="opcion_correcta" value="0" class="w-5 h-5 mr-2 text-emerald-600" checked><input type="text" id="opcion-0" class="w-full px-3 py-1 border rounded-lg"></div>
             <div class="flex items-center mb-2"><input type="radio" name="opcion_correcta" value="1" class="w-5 h-5 mr-2 text-emerald-600"><input type="text" id="opcion-1" class="w-full px-3 py-1 border rounded-lg"></div>
             <div class="flex items-center mb-2"><input type="radio" name="opcion_correcta" value="2" class="w-5 h-5 mr-2 text-emerald-600"><input type="text" id="opcion-2" class="w-full px-3 py-1 border rounded-lg"></div>
             <div class="flex items-center mb-4"><input type="radio" name="opcion_correcta" value="3" class="w-5 h-5 mr-2 text-emerald-600"><input type="text" id="opcion-3" class="w-full px-3 py-1 border rounded-lg"></div>
-
-            <button onclick="guardarPregunta()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg mb-2 hover:bg-emerald-700">Guardar Pregunta</button>
-            <button onclick="cambiarVista('vista-admin')" class="w-full bg-gray-400 text-white font-bold py-2 rounded-lg hover:bg-gray-500">Terminar y Volver</button>
+            
+            <button id="btn-guardar-pregunta" onclick="guardarPregunta()" class="w-full bg-emerald-600 text-white font-bold py-2 rounded-lg mb-2 hover:bg-emerald-700">Guardar Pregunta</button>
+            <div class="flex gap-2">
+                <button id="btn-actualizar-pregunta" onclick="actualizarPregunta()" class="hidden w-2/3 bg-blue-600 text-white font-bold py-2 rounded-lg mb-2 hover:bg-blue-700">Guardar Cambios</button>
+                <button id="btn-cancelar-edicion" onclick="cancelarEdicionPregunta()" class="hidden w-1/3 bg-gray-500 text-white font-bold py-2 rounded-lg mb-2 hover:bg-gray-600">Cancelar</button>
+            </div>
+            <button onclick="cambiarVista('vista-admin')" class="w-full bg-gray-800 text-white font-bold py-2 rounded-lg hover:bg-gray-900 mt-2">Terminar y Volver</button>
         </div>
 
         <div id="vista-hacer-examen" class="hidden text-left py-2">
             <h2 id="titulo-examen-en-curso" class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Examen en curso</h2>
-            <div id="contenedor-preguntas" class="mb-8 space-y-8"></div>
-            <button onclick="finalizarExamen()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-lg text-lg">Finalizar y Calificar</button>
-            <button onclick="cambiarVista('vista-dashboard')" class="w-full text-gray-500 font-bold py-2 mt-2 hover:underline">Abandonar intento</button>
+            <div id="contenedor-preguntas" class="mb-8 space-y-6"></div>
+            <button onclick="abandonarExamen()" class="w-full text-red-500 font-bold py-2 mt-4 hover:underline">Abandonar intento (se perderá el progreso)</button>
         </div>
 
         <div id="vista-resultados" class="hidden text-center py-4">
             <h2 class="text-3xl font-bold text-gray-800 mb-2">Resultados</h2>
             <div class="bg-slate-100 p-6 rounded-xl mb-6 inline-block w-full">
                 <p class="text-gray-600 font-semibold mb-1">Tu calificación:</p>
-                <p id="texto-calificacion" class="text-5xl font-black text-blue-600">0 / 0</p>
+                <p id="texto-calificacion" class="text-5xl font-black text-slate-800">0 / 0</p>
                 <p id="texto-calificacion-decimal" class="text-2xl font-bold text-gray-500 mt-2">Nota: 0.0</p>
             </div>
             <h3 class="font-bold text-left text-gray-700 mb-4 border-b pb-1">Desglose de respuestas:</h3>
             <div id="contenedor-desglose" class="text-left space-y-4 mb-8 max-h-96 overflow-y-auto pr-2"></div>
-            <div class="flex flex-col gap-3 no-imprimir">
-                <button onclick="guardarResultadosPDF()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-500 shadow-lg flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
-                    Guardar resultados como PDF
-                </button>
-                <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mis simuladores</button>
+            <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mi zona de estudio</button>
+        </div>
+
+        <div id="vista-historial-detalle" class="hidden text-center py-4">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Revisión del Intento</h2>
+            <div class="bg-slate-100 p-4 rounded-xl mb-6 inline-block w-full">
+                <p class="text-gray-600 font-semibold mb-1">Calificación obtenida:</p>
+                <p id="historial-texto-calificacion" class="text-4xl font-black text-slate-800">0 / 0</p>
+                <p id="historial-texto-decimal" class="text-2xl font-bold text-gray-500 mt-2">Nota: 0.0</p>
             </div>
+            <h3 class="font-bold text-left text-gray-700 mb-4 border-b pb-1">Tus respuestas en este intento:</h3>
+            <div id="historial-contenedor-desglose" class="text-left space-y-4 mb-8 max-h-96 overflow-y-auto pr-2"></div>
+            <button onclick="cargarMisExamenes()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-lg hover:bg-slate-700 shadow-lg">Volver a mi zona de estudio</button>
         </div>
 
     </div>
@@ -160,13 +198,30 @@
         let cuestionarioActualId = null;
         let examenActivo = []; 
         let respuestasUsuario = {}; 
+        let esExamenDeRepaso = false; 
+        let esSimulacionGlobal = false;
+        let esRepasoSimulacionGlobal = false;
+        let categoriaActualSimulacionId = null;
+        
+        let timerInterval;
+        let tiempoRestante = 7200;
+        let paginaActual = 0;
+        const PREGUNTAS_POR_PAGINA = 10;
+
+        let listaGlobalCategorias = []; let listaGlobalCuestionarios = []; let misCuestionariosGlobal = []; let miHistorialGlobal = []; let misErroresGlobal = [];
+        
+        // Variables para la edición de preguntas
+        let preguntaEditandoId = null;
+        let opcionesEditandoIds = [];
 
         function cambiarVista(vistaDestino) {
-            const vistas = ['vista-login', 'vista-registro', 'vista-password', 'vista-dashboard', 'vista-admin', 'vista-editor', 'vista-hacer-examen', 'vista-resultados'];
+            const vistas = ['vista-login', 'vista-registro', 'vista-password', 'vista-dashboard', 'vista-admin', 'vista-editor', 'vista-hacer-examen', 'vista-resultados', 'vista-historial-detalle'];
             vistas.forEach(v => document.getElementById(v).classList.add('hidden'));
             document.getElementById(vistaDestino).classList.remove('hidden');
             window.scrollTo(0, 0); 
         }
+
+        function toggleAcordeon(id) { const el = document.getElementById(id); el.classList.toggle('hidden'); }
 
         async function registrarUsuario() {
             const usuario = document.getElementById('reg-usuario').value; const correo = document.getElementById('reg-correo').value; const password = document.getElementById('reg-password').value;
@@ -183,66 +238,123 @@
                 usuarioActualId = data.id;
                 Swal.fire({ title: '¡Conectado!', text: data.mensaje, icon: 'success', timer: 1000, showConfirmButton: false }).then(() => {
                     document.getElementById('form-login').reset();
-                    if (data.rol === 'admin') {
-                        cargarCuestionariosEnSelect(); cargarAlumnosEnSelect(); cambiarVista('vista-admin');
-                    } else {
-                        document.getElementById('texto-bienvenida-alumno').innerText = `Hola, ${usuario}. Listo para estudiar.`;
-                        cargarMisExamenes(); 
-                    }
+                    if (data.rol === 'admin') { cargarDatosAdmin(); cambiarVista('vista-admin'); } 
+                    else { document.getElementById('texto-bienvenida-alumno').innerText = `Hola, ${usuario}. Listo para estudiar.`; cargarMisExamenes(); }
                 });
             } else { Swal.fire('Error', data.error, 'error'); }
         }
 
-        function cerrarSesion() { usuarioActualId = null; cambiarVista('vista-login'); }
-        async function actualizarPassword() { /* Omitido */ }
+        function cerrarSesion() { usuarioActualId = null; detenerReloj(); cambiarVista('vista-login'); }
+        
+        async function actualizarPassword() {
+            const usuario = document.getElementById('pass-usuario').value; const nuevaPassword = document.getElementById('pass-nueva').value;
+            if (!usuario || !nuevaPassword) return Swal.fire('Error', 'Llena todos los campos', 'error');
+            const res = await fetch('/cambiar-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario, nuevaPassword }) });
+            const data = await res.json();
+            if (res.ok) { Swal.fire('¡Listo!', data.mensaje, 'success').then(() => { document.getElementById('form-password').reset(); cambiarVista('vista-login'); }); } 
+            else { Swal.fire('Error', data.error, 'error'); }
+        }
+
+        // ========================================================
+        // GESTOR DE ADMIN
+        // ========================================================
+        async function cargarDatosAdmin() { await cargarCategorias(); await cargarCuestionariosEnSelect(); await cargarAlumnosEnSelect(); }
+        
+        async function crearCategoria() {
+            const nombre = document.getElementById('nueva-categoria-nombre').value; const color = document.getElementById('nueva-categoria-color').value;
+            if(!nombre) return;
+            const res = await fetch('/crear-categoria', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre, color }) });
+            if(res.ok) { Swal.fire({ title: 'Creada', icon: 'success', timer: 1000, showConfirmButton: false }); document.getElementById('nueva-categoria-nombre').value = ''; await cargarCategorias(); } 
+        }
+
+        async function cargarCategorias() {
+            const res = await fetch('/categorias'); listaGlobalCategorias = await res.json();
+            const sNuevo = document.getElementById('select-categoria-nuevo'); const sEditar = document.getElementById('select-categoria-editar'); const sReset = document.getElementById('lista-categorias-reset');
+            let opcionesHTML = '<option value="">Sin categoría (Gris por defecto)</option>';
+            let opcionesResetHTML = '<option value="all">⚠️ TODAS LAS CATEGORÍAS (Reset Total)</option>';
+            listaGlobalCategorias.forEach(cat => { opcionesHTML += `<option value="${cat.id}">${cat.nombre}</option>`; opcionesResetHTML += `<option value="${cat.id}">${cat.nombre}</option>`; });
+            sNuevo.innerHTML = opcionesHTML; sEditar.innerHTML = opcionesHTML; sReset.innerHTML = opcionesResetHTML;
+        }
 
         async function crearCuestionario() {
-            const titulo = document.getElementById('nuevo-cuestionario-titulo').value; if(!titulo) return Swal.fire('Error','Escribe un título.','error');
-            const res = await fetch('/crear-cuestionario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo }) });
-            if(res.ok){ Swal.fire('¡Éxito!', 'Cuestionario creado', 'success'); document.getElementById('nuevo-cuestionario-titulo').value=''; cargarCuestionariosEnSelect(); } 
+            const titulo = document.getElementById('nuevo-cuestionario-titulo').value; const categoria_id = document.getElementById('select-categoria-nuevo').value;
+            if(!titulo) return;
+            const res = await fetch('/crear-cuestionario', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo, categoria_id }) });
+            if(res.ok){ Swal.fire({ title: 'Creado', icon: 'success', timer: 1000, showConfirmButton: false }); document.getElementById('nuevo-cuestionario-titulo').value=''; cargarCuestionariosEnSelect(); } 
         }
 
         async function cargarCuestionariosEnSelect() {
-            const res = await fetch('/cuestionarios'); const cuestionarios = await res.json();
-            const sE = document.getElementById('lista-cuestionarios-editar'); const sA = document.getElementById('lista-cuestionarios-asignar');
-            sE.innerHTML = '<option value="">Selecciona...</option>'; sA.innerHTML = '<option value="">Selecciona...</option>';
-            cuestionarios.forEach(c => { sE.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; sA.innerHTML += `<option value="${c.id}">${c.titulo}</option>`; });
+            const res = await fetch('/cuestionarios'); listaGlobalCuestionarios = await res.json();
+            const sEditarDatos = document.getElementById('lista-cuestionarios-editar-datos'); const sPreguntas = document.getElementById('lista-cuestionarios-preguntas'); const sAsignar = document.getElementById('lista-cuestionarios-asignar');
+            sEditarDatos.innerHTML = '<option value="">Selecciona un módulo...</option>'; sPreguntas.innerHTML = '<option value="">Selecciona un módulo...</option>'; sAsignar.innerHTML = '<option value="">Selecciona un módulo...</option>';
+            listaGlobalCuestionarios.forEach(c => { 
+                const catInfo = c.categoria_nombre ? ` (${c.categoria_nombre})` : ''; const optionText = `${c.titulo}${catInfo}`;
+                sEditarDatos.innerHTML += `<option value="${c.id}">${optionText}</option>`; sPreguntas.innerHTML += `<option value="${c.id}">${optionText}</option>`; sAsignar.innerHTML += `<option value="${c.id}">${optionText}</option>`; 
+            });
+        }
+
+        function cargarDatosEdicionRapida() {
+            const id = document.getElementById('lista-cuestionarios-editar-datos').value;
+            if(!id) { document.getElementById('editar-solo-titulo').value = ''; document.getElementById('select-categoria-editar').value = ''; return; }
+            const cuestionario = listaGlobalCuestionarios.find(c => c.id == id);
+            document.getElementById('editar-solo-titulo').value = cuestionario.titulo; document.getElementById('select-categoria-editar').value = cuestionario.categoria_id || '';
+        }
+
+        async function guardarEdicionCuestionario() {
+            const id = document.getElementById('lista-cuestionarios-editar-datos').value; const titulo = document.getElementById('editar-solo-titulo').value; const categoria_id = document.getElementById('select-categoria-editar').value;
+            if(!id || !titulo) return;
+            const res = await fetch(`/editar-cuestionario/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo, categoria_id }) });
+            if(res.ok) { Swal.fire({ title: 'Actualizado', icon: 'success', timer: 1000, showConfirmButton: false }); cargarCuestionariosEnSelect(); }
+        }
+
+        async function eliminarCuestionario() {
+            const id = document.getElementById('lista-cuestionarios-editar-datos').value;
+            if(!id) return Swal.fire('Ojo','Primero selecciona un cuestionario.','warning');
+            
+            const { value: passwordAdmin } = await Swal.fire({
+                title: 'Eliminar Cuestionario', text: 'Se borrará el cuestionario, todas sus preguntas y los resultados de los alumnos relacionados. Ingresa tu contraseña de administrador:',
+                input: 'password', inputPlaceholder: 'Tu contraseña', showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'Sí, eliminar'
+            });
+
+            if (passwordAdmin) {
+                const res = await fetch('/eliminar-cuestionario', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({admin_id: usuarioActualId, admin_password: passwordAdmin, cuestionario_id: id}) });
+                const data = await res.json();
+                if(res.ok) { Swal.fire('¡Eliminado!', data.mensaje, 'success'); cargarCuestionariosEnSelect(); document.getElementById('editar-solo-titulo').value = ''; } 
+                else { Swal.fire('Error', data.error, 'error'); }
+            }
         }
 
         function abrirEditorPreguntas() {
-            const s = document.getElementById('lista-cuestionarios-editar'); const id = s.value;
-            if(!id) return Swal.fire('Ojo','Selecciona un cuestionario.','warning');
-            cuestionarioActualId = id;
-            document.getElementById('titulo-cuestionario-activo').innerText = `Gestor de Preguntas: ${s.options[s.selectedIndex].text}`;
-            cargarPreguntasExistentes(); 
-            cambiarVista('vista-editor');
+            const s = document.getElementById('lista-cuestionarios-preguntas'); const id = s.value;
+            if(!id) return;
+            cuestionarioActualId = id; document.getElementById('titulo-cuestionario-activo').innerText = `Gestor: ${s.options[s.selectedIndex].text}`;
+            cancelarEdicionPregunta(); // Resetea el formulario por si acaso
+            cargarPreguntasExistentes(); cambiarVista('vista-editor');
         }
 
         async function cargarPreguntasExistentes() {
-            const res = await fetch(`/preguntas-admin/${cuestionarioActualId}`);
-            const preguntas = await res.json();
-            const contenedor = document.getElementById('contenedor-preguntas-existentes');
-            contenedor.innerHTML = '';
-            
-            if (preguntas.length === 0) {
-                contenedor.innerHTML = '<p class="text-sm text-gray-500 italic p-2">No hay preguntas en este simulador aún.</p>';
-            } else {
-                preguntas.forEach((p, i) => {
+            const res = await fetch(`/preguntas-admin/${cuestionarioActualId}`); const preguntas = await res.json();
+            const contenedor = document.getElementById('contenedor-preguntas-existentes'); contenedor.innerHTML = '';
+            if (preguntas.length === 0) { contenedor.innerHTML = '<p class="text-sm text-gray-500 italic p-2">No hay preguntas.</p>'; } 
+            else { 
+                preguntas.forEach((p, i) => { 
                     contenedor.innerHTML += `
-                        <div class="flex justify-between items-center bg-white p-2 border rounded shadow-sm text-sm">
-                            <span class="truncate pr-2 font-medium text-gray-700">${i + 1}. ${p.texto_pregunta}</span>
+                    <div class="flex justify-between items-center bg-white p-2 border rounded shadow-sm text-sm mb-1">
+                        <span class="truncate pr-2 font-medium text-gray-700">${i + 1}. ${p.texto_pregunta}</span>
+                        <div class="flex gap-1 shrink-0">
+                            <button onclick="cargarPreguntaParaEditar(${p.id})" class="text-blue-500 hover:text-white border border-blue-500 hover:bg-blue-500 font-bold px-2 py-1 rounded transition">Editar</button>
                             <button onclick="borrarPregunta(${p.id})" class="text-red-500 hover:text-white border border-red-500 hover:bg-red-500 font-bold px-2 py-1 rounded transition">Borrar</button>
                         </div>
-                    `;
-                });
+                    </div>`; 
+                }); 
             }
         }
 
         async function borrarPregunta(idPregunta) {
-            const confirmar = await Swal.fire({ title: '¿Borrar pregunta?', text: "No podrás revertir esto.", icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, borrar', cancelButtonText: 'Cancelar' });
+            const confirmar = await Swal.fire({ title: '¿Borrar pregunta?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, borrar', cancelButtonText: 'Cancelar' });
             if (!confirmar.isConfirmed) return;
             const res = await fetch(`/eliminar-pregunta/${idPregunta}`, { method: 'DELETE' });
-            if (res.ok) { Swal.fire({ title: 'Borrada', icon: 'success', timer: 1000, showConfirmButton: false }); cargarPreguntasExistentes(); }
+            if (res.ok) { cargarPreguntasExistentes(); }
         }
 
         async function guardarPregunta() {
@@ -251,142 +363,483 @@
             if(!tp || !op0 || !op1 || !op2 || !op3) return Swal.fire('Error','Llena todo.','error');
             const opciones = [ {texto:op0, es_correcta:ci==0?1:0}, {texto:op1, es_correcta:ci==1?1:0}, {texto:op2, es_correcta:ci==2?1:0}, {texto:op3, es_correcta:ci==3?1:0} ];
             const res = await fetch('/agregar-pregunta', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cuestionario_id:cuestionarioActualId, texto_pregunta:tp, opciones}) });
-            if(res.ok){
-                Swal.fire({title:'¡Guardada!', icon:'success', timer:1000, showConfirmButton:false});
-                document.getElementById('texto-pregunta').value=''; document.getElementById('opcion-0').value=''; document.getElementById('opcion-1').value=''; document.getElementById('opcion-2').value=''; document.getElementById('opcion-3').value='';
-                document.querySelector('input[name="opcion_correcta"][value="0"]').checked=true;
-                cargarPreguntasExistentes(); 
-            }
+            if(res.ok){ Swal.fire({title:'¡Guardada!', icon:'success', timer:1000, showConfirmButton:false}); cancelarEdicionPregunta(); cargarPreguntasExistentes(); }
         }
 
-        async function cargarAlumnosEnSelect() { const res = await fetch('/alumnos'); const alumnos = await res.json(); const s = document.getElementById('lista-alumnos-asignar'); s.innerHTML = '<option value="">Selecciona un alumno...</option>'; alumnos.forEach(a => { s.innerHTML += `<option value="${a.id}">${a.usuario}</option>`; }); }
-        
+        async function cargarPreguntaParaEditar(id) {
+            const res = await fetch(`/pregunta/${id}`);
+            const data = await res.json();
+            preguntaEditandoId = data.pregunta.id;
+            document.getElementById('texto-pregunta').value = data.pregunta.texto_pregunta;
+            opcionesEditandoIds = [];
+            data.opciones.forEach((op, index) => {
+                if (index < 4) { 
+                    document.getElementById(`opcion-${index}`).value = op.texto_opcion;
+                    opcionesEditandoIds.push(op.id);
+                    if (op.es_correcta === 1) document.querySelector(`input[name="opcion_correcta"][value="${index}"]`).checked = true;
+                }
+            });
+            document.getElementById('btn-guardar-pregunta').classList.add('hidden'); document.getElementById('btn-actualizar-pregunta').classList.remove('hidden'); document.getElementById('btn-cancelar-edicion').classList.remove('hidden');
+            document.getElementById('titulo-formulario-pregunta').innerText = "✏️ Editando Pregunta:"; document.getElementById('texto-pregunta').focus();
+        }
+
+        async function actualizarPregunta() {
+            const tp = document.getElementById('texto-pregunta').value; const ci = document.querySelector('input[name="opcion_correcta"]:checked').value;
+            const op0 = document.getElementById('opcion-0').value; const op1 = document.getElementById('opcion-1').value; const op2 = document.getElementById('opcion-2').value; const op3 = document.getElementById('opcion-3').value;
+            if(!tp || !op0 || !op1 || !op2 || !op3) return Swal.fire('Error','Llena todo.','error');
+            const opciones = [ 
+                {id: opcionesEditandoIds[0], texto: op0, es_correcta: ci==0?1:0}, {id: opcionesEditandoIds[1], texto: op1, es_correcta: ci==1?1:0},
+                {id: opcionesEditandoIds[2], texto: op2, es_correcta: ci==2?1:0}, {id: opcionesEditandoIds[3], texto: op3, es_correcta: ci==3?1:0}
+            ];
+            const res = await fetch(`/editar-pregunta/${preguntaEditandoId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({texto_pregunta:tp, opciones}) });
+            if(res.ok) { Swal.fire({title:'¡Actualizada!', icon:'success', timer:1000, showConfirmButton:false}); cancelarEdicionPregunta(); cargarPreguntasExistentes(); }
+        }
+
+        function cancelarEdicionPregunta() {
+            preguntaEditandoId = null; opcionesEditandoIds = []; document.getElementById('texto-pregunta').value = '';
+            for(let i=0; i<4; i++) document.getElementById(`opcion-${i}`).value = '';
+            document.querySelector(`input[name="opcion_correcta"][value="0"]`).checked = true;
+            document.getElementById('btn-guardar-pregunta').classList.remove('hidden'); document.getElementById('btn-actualizar-pregunta').classList.add('hidden'); document.getElementById('btn-cancelar-edicion').classList.add('hidden');
+            document.getElementById('titulo-formulario-pregunta').innerText = "➕ Añadir Nueva Pregunta:";
+        }
+
+        async function cargarAlumnosEnSelect() { 
+            const res = await fetch('/alumnos'); const alumnos = await res.json(); 
+            const arr = [ 'lista-alumnos-asignar', 'lista-alumnos-errores', 'lista-usuarios-gestion', 'lista-alumnos-reset' ];
+            arr.forEach(id => { document.getElementById(id).innerHTML = '<option value="">Selecciona alumno...</option>'; });
+            alumnos.forEach(a => { arr.forEach(id => { document.getElementById(id).innerHTML += `<option value="${a.id}">${a.usuario}</option>`; }); }); 
+        }
+
         async function asignarCuestionario() {
             const ui = document.getElementById('lista-alumnos-asignar').value; const ci = document.getElementById('lista-cuestionarios-asignar').value;
-            if(!ui || !ci) return Swal.fire('Ojo','Selecciona alumno y cuestionario.','warning');
+            if(!ui || !ci) return;
             const res = await fetch('/asignar', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({usuario_id:ui, cuestionario_id:ci}) });
             const data = await res.json();
-            if(res.ok){ Swal.fire('¡Listo!', data.mensaje, 'success'); document.getElementById('lista-alumnos-asignar').value=''; document.getElementById('lista-cuestionarios-asignar').value=''; } else { Swal.fire('Error', data.error, 'error'); } 
+            if(res.ok){ Swal.fire({ title: 'Acceso otorgado', icon: 'success', timer: 1000, showConfirmButton: false }); } else { Swal.fire('Error', data.error, 'error'); } 
         }
 
-        // ==========================================
-        // FUNCIÓN DE REPORTES ACTUALIZADA (ZONA HORARIA CDMX)
-        // ==========================================
         async function verReportes() {
-            const res = await fetch('/reportes');
-            const reportes = await res.json();
-            
-            const tbody = document.getElementById('cuerpo-tabla-reportes');
-            tbody.innerHTML = '';
-            
-            if (reportes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-center text-gray-500 italic">No hay exámenes contestados aún.</td></tr>';
-            } else {
-                reportes.forEach(r => {
-                    // 1. Arreglamos la fecha de la base de datos para que Javascript sepa que es tiempo universal (UTC)
-                    const fechaIso = r.fecha.replace(' ', 'T') + 'Z';
-                    const fechaObj = new Date(fechaIso);
-                    
-                    // 2. Forzamos que se muestre con la hora de la Ciudad de México
-                    const fechaBonita = fechaObj.toLocaleString('es-MX', {
-                        timeZone: 'America/Mexico_City',
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true
-                    });
-                    
-                    const porcentaje = r.aciertos / r.total_preguntas;
-                    const calificacionSobre10 = (porcentaje * 10).toFixed(1); 
-                    const colorNota = porcentaje >= 0.6 ? 'text-green-600' : 'text-red-500';
-
-                    tbody.innerHTML += `
-                        <tr class="border-b hover:bg-gray-50 transition">
-                            <td class="px-3 py-3 font-semibold text-gray-800">${r.usuario}</td>
-                            <td class="px-3 py-3">${r.titulo}</td>
-                            <td class="px-3 py-3 text-center text-gray-600 font-bold">${r.aciertos} / ${r.total_preguntas}</td>
-                            <td class="px-3 py-3 text-center font-black ${colorNota}">${calificacionSobre10}</td>
-                            <td class="px-3 py-3 text-xs text-gray-500">${fechaBonita}</td>
-                        </tr>
-                    `;
-                });
-            }
+            const res = await fetch('/reportes'); const reportes = await res.json();
+            const contenedor = document.getElementById('contenedor-reportes-agrupados'); contenedor.innerHTML = '';
             document.getElementById('tabla-reportes-container').classList.remove('hidden');
+
+            if (reportes.length === 0) { contenedor.innerHTML = '<p class="text-center text-gray-500 italic p-4">No hay exámenes contestados.</p>'; return; } 
+
+            const agrupados = {};
+            reportes.forEach(r => { if(!agrupados[r.usuario]) agrupados[r.usuario] = []; agrupados[r.usuario].push(r); });
+
+            for(const [usuario, exams] of Object.entries(agrupados)) {
+                let tablaHTML = `
+                <div class="mb-3 border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                    <button onclick="toggleAcordeon('acc-${usuario}')" class="w-full bg-slate-200 px-4 py-3 text-left font-bold text-slate-800 hover:bg-slate-300 flex justify-between items-center transition">
+                        <span>👤 ${usuario} <span class="text-xs bg-slate-600 text-white px-2 py-1 rounded ml-2">${exams.length} intentos</span></span><span>▼</span>
+                    </button>
+                    <div id="acc-${usuario}" class="hidden bg-white">
+                        <table class="w-full text-sm text-left text-gray-600">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr><th class="px-3 py-2 border-b border-r">Examen</th><th class="px-3 py-2 border-b border-r text-center">Aciertos</th><th class="px-3 py-2 border-b border-r text-center">Nota</th><th class="px-3 py-2 border-b">Fecha</th></tr>
+                            </thead>
+                            <tbody>`;
+                exams.forEach(r => {
+                    const fechaObj = new Date(r.fecha.replace(' ', 'T') + 'Z'); const fechaBonita = fechaObj.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+                    const calificacionDecimal = ((r.aciertos / r.total_preguntas) * 10).toFixed(1); const colorNota = (r.aciertos / r.total_preguntas) >= 0.6 ? 'text-green-600' : 'text-red-500';
+                    tablaHTML += `<tr class="border-b hover:bg-gray-50"><td class="px-3 py-2 border-r font-medium">${r.titulo}</td><td class="px-3 py-2 border-r text-center">${r.aciertos}/${r.total_preguntas}</td><td class="px-3 py-2 border-r text-center font-black ${colorNota}">${calificacionDecimal}</td><td class="px-3 py-2 text-xs text-gray-500">${fechaBonita}</td></tr>`;
+                });
+                tablaHTML += `</tbody></table></div></div>`;
+                contenedor.innerHTML += tablaHTML;
+            }
         }
 
-        // --- MOTOR DE EXÁMENES (ALUMNO) ---
+        async function verErroresAdmin() {
+            const ui = document.getElementById('lista-alumnos-errores').value; if(!ui) return;
+            const res = await fetch(`/errores-alumno/${ui}`); const errores = await res.json();
+            const contenedor = document.getElementById('contenedor-errores-admin'); contenedor.innerHTML = '';
+            
+            if(errores.length === 0) { contenedor.innerHTML = '<p class="text-green-600 font-bold text-sm">Este alumno no tiene preguntas falladas acumuladas.</p>'; } 
+            else {
+                const agrupados = {};
+                errores.forEach(e => {
+                    const nombreCat = e.cat_nombre || 'Módulo General'; const key = `${nombreCat}_${e.es_simulacion}`;
+                    if(!agrupados[key]) agrupados[key] = { nombreCat, esSim: e.es_simulacion, preguntas: [] };
+                    agrupados[key].preguntas.push(e);
+                });
+
+                for (const key in agrupados) {
+                    const g = agrupados[key]; const tituloGrupo = g.esSim ? `🎓 SIMULACIÓN: ${g.nombreCat}` : `📁 MÓDULOS: ${g.nombreCat}`;
+                    contenedor.innerHTML += `<h4 class="font-bold text-red-700 mt-4 border-b border-red-200">${tituloGrupo} (${g.preguntas.length} errores)</h4>`;
+                    g.preguntas.forEach((p, i) => { contenedor.innerHTML += `<div class="py-2 border-b border-gray-100"><p class="text-xs text-slate-500 font-bold uppercase">${p.modulo_origen}</p><p class="text-sm text-gray-800">${i+1}. ${p.texto_pregunta}</p></div>`; });
+                }
+            }
+            contenedor.classList.remove('hidden');
+        }
+
+        async function cambiarPasswordUsuario() {
+            const ui = document.getElementById('lista-usuarios-gestion').value;
+            if(!ui) return Swal.fire('Ojo','Selecciona un usuario.','warning');
+            const { value: nuevaPass } = await Swal.fire({ title: 'Nueva Contraseña', input: 'text', inputPlaceholder: 'Escribe la contraseña', showCancelButton: true, confirmButtonText: 'Guardar' });
+            if (nuevaPass) {
+                const res = await fetch('/modificar-password-admin', { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({usuario_id: ui, nueva_password: nuevaPass}) });
+                if(res.ok) Swal.fire({title: 'Éxito', icon: 'success', timer:1000, showConfirmButton:false});
+            }
+        }
+
+        async function eliminarUsuario() {
+            const ui = document.getElementById('lista-usuarios-gestion').value;
+            if(!ui) return Swal.fire('Ojo','Selecciona un usuario.','warning');
+            const conf = await Swal.fire({ title: '¿Eliminar definitivamente?', text: "Se borrará todo su historial, acceso y cuenta.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sí, eliminar' });
+            if(conf.isConfirmed) {
+                const res = await fetch(`/eliminar-usuario/${ui}`, { method: 'DELETE' });
+                if(res.ok) { Swal.fire({title: 'Eliminado', icon: 'success', timer:1000, showConfirmButton:false}); cargarAlumnosEnSelect(); }
+            }
+        }
+
+        async function resetearHistorial() {
+            const ui = document.getElementById('lista-alumnos-reset').value; const ci = document.getElementById('lista-categorias-reset').value;
+            if(!ui) return Swal.fire('Ojo','Selecciona un alumno.','warning');
+            
+            const { value: passwordAdmin } = await Swal.fire({
+                title: 'Protección de Seguridad', text: 'Ingresa tu contraseña de administrador para confirmar el borrado del historial:',
+                input: 'password', inputPlaceholder: 'Tu contraseña', showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'Confirmar Borrado'
+            });
+
+            if (passwordAdmin) {
+                const res = await fetch('/reset-historial', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({admin_id: usuarioActualId, admin_password: passwordAdmin, usuario_id: ui, categoria_id: ci})
+                });
+                const data = await res.json();
+                if(res.ok) { Swal.fire('¡Eliminado!', data.mensaje, 'success'); verReportes(); } 
+                else { Swal.fire('Error', data.error, 'error'); }
+            }
+        }
+
+        // ========================================================
+        // INTERFAZ DEL ALUMNO Y EXÁMENES PAGINADOS
+        // ========================================================
+        async function cargarMisExamenes() {
+            detenerReloj(); 
+            const resCuestionarios = await fetch(`/mis-cuestionarios/${usuarioActualId}`); misCuestionariosGlobal = await resCuestionarios.json();
+            const resHistorial = await fetch(`/mi-historial/${usuarioActualId}`); miHistorialGlobal = await resHistorial.json();
+            const resErrores = await fetch(`/errores-alumno/${usuarioActualId}`); misErroresGlobal = await resErrores.json();
+
+            renderizarCategoriasExamenes(); renderizarCategoriasHistorial(); cambiarVista('vista-dashboard');
+        }
+
+        function renderizarCategoriasExamenes() {
+            const contenedor = document.getElementById('contenedor-mis-examenes'); contenedor.innerHTML = '';
+            if (misCuestionariosGlobal.length === 0 && misErroresGlobal.length === 0) { contenedor.innerHTML += '<p class="text-gray-500 italic text-sm">Aún no tienes módulos asignados.</p>'; return; }
+
+            const categorias = {};
+            misCuestionariosGlobal.forEach(c => {
+                const nombreCat = c.categoria_nombre || 'Módulo General'; const colorCat = c.categoria_color || '#64748b'; const idCat = c.categoria_id || 'null';
+                if(!categorias[nombreCat]) categorias[nombreCat] = { id: idCat, color: colorCat, cantidad: 0 };
+                categorias[nombreCat].cantidad++;
+            });
+
+            // Extraemos los nombres de las categorías y los ordenamos alfabética y numéricamente
+            const nombresOrdenados = Object.keys(categorias).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+            nombresOrdenados.forEach(nombre => {
+                const datos = categorias[nombre];
+                const nombreSeguro = encodeURIComponent(nombre);
+                contenedor.innerHTML += `
+                    <button onclick="verExamenesDeCategoria('${nombreSeguro}', '${datos.id}', '${datos.color}')" class="w-full bg-white py-4 px-4 rounded-xl hover:shadow-md transition shadow-sm text-left flex justify-between items-center border-2" style="border-color: ${datos.color}30; background-color: ${datos.color}05;">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-sm" style="background-color: ${datos.color};">${nombre.charAt(0).toUpperCase()}</div>
+                            <div><p class="font-bold text-gray-800 text-lg">${nombre}</p><p class="text-sm font-semibold" style="color: ${datos.color};">${datos.cantidad} módulos de estudio</p></div>
+                        </div>
+                        <span style="color: ${datos.color}; font-size: 1.5rem;">📁</span>
+                    </button>
+                `;
+            });
+        }
+
+        function verExamenesDeCategoria(nombreSeguro, idCatRaw, colorCat) {
+            const nombreCat = decodeURIComponent(nombreSeguro); const contenedor = document.getElementById('contenedor-mis-examenes'); const idCat = idCatRaw === 'null' ? null : idCatRaw;
+            contenedor.innerHTML = `<button onclick="renderizarCategoriasExamenes()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver a Categorías</button>`;
+            
+            const nombreBusqueda = nombreCat === 'Módulo General' ? '🎓 SIMULACIÓN FINAL' : `🎓 Simulación Final: ${nombreCat}`;
+            const intentosSim = miHistorialGlobal.filter(h => h.es_simulacion === true && (h.categoria_nombre === nombreBusqueda || h.categoria_nombre === nombreCat)).length;
+            const badgeSimHTML = intentosSim > 0 ? `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-green-100 text-green-700 border border-green-200">✅ Realizado: ${intentosSim} vez/veces</span>` : `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-yellow-100 text-yellow-700 border border-yellow-200">⏳ Sin intentar</span>`;
+
+            contenedor.innerHTML += `
+                <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 p-1 rounded-xl mb-4 shadow-lg">
+                    <button onclick="iniciarSimulacionGeneral('${idCatRaw}', '${nombreSeguro}')" class="w-full bg-white py-4 px-4 rounded-lg hover:bg-yellow-50 transition text-left flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-2xl shadow-sm bg-yellow-500">🎓</div>
+                            <div><p class="font-bold text-gray-800 text-lg">Simulación Final: ${nombreCat}</p><p class="text-sm font-bold text-yellow-600 mb-1">⏱️ 2 Horas</p>${badgeSimHTML}</div>
+                        </div>
+                        <span style="color: #eab308; font-size: 1.5rem;">🏆</span>
+                    </button>
+                </div>
+            `;
+
+            const erroresModulos = misErroresGlobal.filter(e => e.cat_id == idCat && e.es_simulacion === false);
+            const erroresSimulacion = misErroresGlobal.filter(e => e.cat_id == idCat && e.es_simulacion === true);
+
+            if (erroresModulos.length > 0) {
+                contenedor.innerHTML += `
+                    <div class="bg-red-50 p-1 rounded-xl mb-3 shadow-sm border border-red-200">
+                        <button onclick="abrirZonaRefuerzo('${idCatRaw}', false, '${colorCat}', '${nombreSeguro}')" class="w-full bg-white py-3 px-4 rounded-lg hover:bg-red-100 transition text-left flex justify-between items-center">
+                            <div><p class="font-bold text-red-700">🚨 Repaso de Módulos</p><p class="text-xs font-bold text-red-500">${erroresModulos.length} fallas arrastrando</p></div><span style="font-size: 1.5rem;">🧠</span>
+                        </button>
+                    </div>`;
+            }
+            if (erroresSimulacion.length > 0) {
+                contenedor.innerHTML += `
+                    <div class="bg-orange-50 p-1 rounded-xl mb-4 shadow-sm border border-orange-200">
+                        <button onclick="abrirZonaRefuerzo('${idCatRaw}', true, '${colorCat}', '${nombreSeguro}')" class="w-full bg-white py-3 px-4 rounded-lg hover:bg-orange-100 transition text-left flex justify-between items-center">
+                            <div><p class="font-bold text-orange-700">🚨 Repaso de Simulación Final</p><p class="text-xs font-bold text-orange-500">${erroresSimulacion.length} fallas arrastrando</p></div><span style="font-size: 1.5rem;">🧠</span>
+                        </button>
+                    </div>`;
+            }
+
+            const examenes = misCuestionariosGlobal.filter(c => (c.categoria_nombre || 'Módulo General') === nombreCat);
+            
+            // Ordenamos los exámenes alfabética y numéricamente por su título
+            examenes.sort((a, b) => a.titulo.localeCompare(b.titulo, undefined, { numeric: true, sensitivity: 'base' }));
+
+            examenes.forEach(c => {
+                const tituloSeguro = encodeURIComponent(c.titulo); const colorHex = c.categoria_color || '#64748b';
+                const intentosNum = parseInt(c.cantidad_intentos) || 0;
+                const badgeHTML = intentosNum > 0 ? `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-green-100 text-green-700 border border-green-200">✅ Realizado: ${intentosNum} vez/veces</span>` : `<span class="text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block bg-gray-100 text-gray-500 border border-gray-200">⏳ Sin intentar</span>`;
+
+                contenedor.innerHTML += `
+                    <button onclick="iniciarExamen(${c.id}, '${tituloSeguro}')" class="w-full bg-white py-3 px-4 mb-3 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border" style="border-left-width: 6px; border-left-color: ${colorHex};">
+                        <div><p class="font-bold text-gray-800">📝 ${c.titulo}</p>${badgeHTML}</div><span style="color: ${colorHex}; opacity: 0.8; font-size: 1.5rem;">▶</span>
+                    </button>`; 
+            });
+        }
+
+        function abrirZonaRefuerzo(idCatRaw, isSim, colorCat, nombreSeguro) {
+            const nombreCat = decodeURIComponent(nombreSeguro); const idCat = idCatRaw === 'null' ? null : idCatRaw;
+            const errores = misErroresGlobal.filter(e => e.cat_id == idCat && e.es_simulacion === isSim);
+            const tipoRepaso = isSim ? 'Simulación Final' : 'Módulos';
+            
+            const contenedor = document.getElementById('contenedor-mis-examenes');
+            contenedor.innerHTML = `
+                <button onclick="verExamenesDeCategoria('${nombreSeguro}', '${idCatRaw}', '${colorCat}')" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver</button>
+                <div class="bg-red-50 p-5 rounded-xl border border-red-200 shadow-sm text-left">
+                    <h3 class="text-xl font-bold text-red-700 mb-2">Repaso de ${tipoRepaso}</h3>
+                    <p class="text-gray-700 text-sm mb-4">Tienes <b>${errores.length} pregunta(s)</b> falladas en esta categoría. Se ha armado un bloque de hasta 15 preguntas. <b>Contesta este bloque 3 veces.</b> Si aciertas, se eliminarán de tus errores.</p>
+                    <button onclick="iniciarExamenRepaso('${idCatRaw}', ${isSim}, '${nombreSeguro}')" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 shadow-md">▶ Iniciar Repaso</button>
+                </div>
+            `;
+        }
+
+        async function iniciarExamenRepaso(catId, isSim, nombreSeguro) {
+            cuestionarioActualId = 'repaso'; esExamenDeRepaso = true; esSimulacionGlobal = false; esRepasoSimulacionGlobal = isSim; categoriaActualSimulacionId = catId;
+            const nombreCat = decodeURIComponent(nombreSeguro);
+            document.getElementById('titulo-examen-en-curso').innerText = '🚨 Repaso de Errores'; cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-gray-500">Armando bloque...</p>';
+
+            const res = await fetch(`/examen-repaso/${usuarioActualId}/${catId}/${isSim}`); const data = await res.json(); 
+            respuestasUsuario = {}; paginaActual = 0;
+            if (!data.preguntas || data.preguntas.length === 0) { Swal.fire('¡Felicidades!', 'Ya no tienes errores acumulados.', 'success'); return cargarMisExamenes(); }
+
+            examenActivo = mezclarArreglo(data.preguntas); examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
+            document.getElementById('titulo-examen-en-curso').innerText = `🚨 Repaso de ${isSim ? 'Simulación' : 'Módulos'} (${nombreCat}) - Intento ${data.intentoActual} de 3`;
+            renderizarExamenPaginado();
+        }
+
+        async function iniciarExamen(id, tituloCodificado) {
+            cuestionarioActualId = id; esExamenDeRepaso = false; esSimulacionGlobal = false; esRepasoSimulacionGlobal = false; categoriaActualSimulacionId = null;
+            document.getElementById('titulo-examen-en-curso').innerText = decodeURIComponent(tituloCodificado); cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
+            
+            const res = await fetch(`/examen/${id}`); examenActivo = await res.json(); 
+            if (examenActivo.error) { Swal.fire('Error', examenActivo.error, 'error'); return cargarMisExamenes(); }
+
+            respuestasUsuario = {}; paginaActual = 0;
+            if (examenActivo.length === 0) { document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-red-500">Sin preguntas.</p>'; return; }
+
+            examenActivo = mezclarArreglo(examenActivo); examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
+            renderizarExamenPaginado();
+        }
+
+        async function iniciarSimulacionGeneral(catId, nombreSeguro) {
+            const confirmar = await Swal.fire({ title: '¿Iniciar Simulación Final?', text: "Te enfrentarás a todas las preguntas de esta categoría con un reloj de 2 HORAS. Si el tiempo se agota, se enviará automáticamente.", icon: 'warning', showCancelButton: true, confirmButtonText: '¡Estoy listo!', cancelButtonText: 'Aún no', confirmButtonColor: '#eab308' });
+            if(!confirmar.isConfirmed) return;
+
+            cuestionarioActualId = 'simulacion'; esExamenDeRepaso = false; esSimulacionGlobal = true; esRepasoSimulacionGlobal = false; categoriaActualSimulacionId = catId;
+            document.getElementById('titulo-examen-en-curso').innerText = `🎓 Simulación Final: ${decodeURIComponent(nombreSeguro)}`; cambiarVista('vista-hacer-examen'); document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center font-bold text-yellow-600">Revolviendo las preguntas... Prepárate.</p>';
+
+            const res = await fetch(`/examen-simulacion-final/${catId}`); examenActivo = await res.json();
+            respuestasUsuario = {}; paginaActual = 0;
+            
+            if (examenActivo.length === 0) { document.getElementById('contenedor-preguntas').innerHTML = '<p class="text-center text-red-500">Sin preguntas en esta categoría.</p>'; return; }
+
+            examenActivo = mezclarArreglo(examenActivo); examenActivo.forEach(p => p.opciones = mezclarArreglo(p.opciones));
+            iniciarReloj(); renderizarExamenPaginado();
+        }
+
         function mezclarArreglo(arreglo) {
             for (let i = arreglo.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arreglo[i], arreglo[j]] = [arreglo[j], arreglo[i]]; }
             return arreglo;
         }
 
-        async function cargarMisExamenes() {
-            const res = await fetch(`/mis-cuestionarios/${usuarioActualId}`); const cuestionarios = await res.json();
-            const contenedor = document.getElementById('contenedor-mis-examenes'); contenedor.innerHTML = '';
-            if (cuestionarios.length === 0) { contenedor.innerHTML = '<p class="text-gray-500 italic">Aún no tienes simuladores asignados.</p>'; } 
-            else { cuestionarios.forEach(c => { contenedor.innerHTML += `<button onclick="iniciarExamen(${c.id}, '${c.titulo}')" class="w-full bg-blue-50 text-blue-700 border border-blue-200 font-bold py-3 px-4 rounded-lg hover:bg-blue-600 hover:text-white transition shadow-sm text-left flex justify-between items-center"><span>📝 ${c.titulo}</span><span>▶️</span></button>`; }); }
-            cambiarVista('vista-dashboard');
-        }
+        function renderizarExamenPaginado() {
+            const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '';
+            const inicio = paginaActual * PREGUNTAS_POR_PAGINA; const fin = Math.min(inicio + PREGUNTAS_POR_PAGINA, examenActivo.length);
+            const preguntasPagina = examenActivo.slice(inicio, fin);
 
-        async function iniciarExamen(id, titulo) {
-            cuestionarioActualId = id; document.getElementById('titulo-examen-en-curso').innerText = titulo;
-            const contenedor = document.getElementById('contenedor-preguntas'); contenedor.innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
-            cambiarVista('vista-hacer-examen');
-            const res = await fetch(`/examen/${id}`); examenActivo = await res.json(); respuestasUsuario = {};
-            if (examenActivo.length === 0) { contenedor.innerHTML = '<p class="text-center text-red-500">Este examen no tiene preguntas aún.</p>'; return; }
+            preguntasPagina.forEach((pregunta, index) => {
+                const numReal = inicio + index + 1; let htmlOpciones = '';
+                
+                // Formateador automático para listas numéricas dentro del texto
+                let textoFormateado = pregunta.texto.replace(/ (\d+\.) /g, '<br><br><b class="text-slate-800">$1</b> ');
 
-            examenActivo = mezclarArreglo(examenActivo); 
-            contenedor.innerHTML = ''; 
-            
-            examenActivo.forEach((pregunta, index) => {
-                pregunta.opciones = mezclarArreglo(pregunta.opciones); 
-                let htmlOpciones = '';
-                pregunta.opciones.forEach(opcion => { htmlOpciones += `<label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-blue-50 transition"><input type="radio" name="pregunta_${pregunta.id}" value="${opcion.id}" onchange="registrarRespuesta(${pregunta.id}, ${opcion.id})" class="w-5 h-5 text-blue-600 mr-3"><span class="text-gray-700">${opcion.texto}</span></label>`; });
-                contenedor.innerHTML += `<div class="bg-gray-50 p-5 rounded-xl border border-gray-200"><p class="font-bold text-gray-800 mb-4"><span class="text-blue-600">${index + 1}.</span> ${pregunta.texto}</p><div class="space-y-2">${htmlOpciones}</div></div>`;
+                pregunta.opciones.forEach(opcion => {
+                    const checked = respuestasUsuario[pregunta.id] === parseInt(opcion.id) ? 'checked' : '';
+                    htmlOpciones += `<label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition"><input type="radio" name="pregunta_${pregunta.id}" value="${opcion.id}" onchange="registrarRespuesta(${pregunta.id}, ${opcion.id})" class="w-5 h-5 text-slate-800 mr-3" ${checked}><span class="text-gray-700">${opcion.texto}</span></label>`;
+                });
+                
+                contenedor.innerHTML += `<div class="bg-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm"><p class="font-bold text-gray-800 mb-4"><span class="text-slate-800">${numReal}.</span> ${textoFormateado}</p><div class="space-y-2">${htmlOpciones}</div></div>`;
             });
+
+            let htmlBotones = '<div class="flex justify-between mt-6">';
+            if (paginaActual > 0) { htmlBotones += `<button onclick="cambiarPagina(-1)" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition shadow-sm border border-gray-400">⬅ Anterior</button>`; } 
+            else { htmlBotones += `<div></div>`; }
+
+            if (fin < examenActivo.length) { htmlBotones += `<button onclick="cambiarPagina(1)" class="bg-slate-800 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-700 transition shadow-sm">Siguiente ➡</button>`; } 
+            else { htmlBotones += `<button onclick="finalizarExamen(false)" class="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition shadow-lg text-lg">Finalizar y Calificar ✔</button>`; }
+            htmlBotones += '</div>';
+            contenedor.innerHTML += htmlBotones;
         }
 
+        function cambiarPagina(delta) { paginaActual += delta; window.scrollTo(0, 0); renderizarExamenPaginado(); }
         function registrarRespuesta(preguntaId, opcionId) { respuestasUsuario[preguntaId] = parseInt(opcionId); }
 
-        async function finalizarExamen() {
-            const contestadas = Object.keys(respuestasUsuario).length;
-            if (contestadas < examenActivo.length) {
-                const confirmar = await Swal.fire({ title: '¿Estás seguro?', text: `Te faltan ${examenActivo.length - contestadas} preguntas.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, finalizar', cancelButtonText: 'Seguir' });
-                if (!confirmar.isConfirmed) return;
+        function iniciarReloj() {
+            tiempoRestante = 7200; document.getElementById('reloj-flotante').classList.remove('hidden'); actualizarTextoReloj();
+            timerInterval = setInterval(() => {
+                tiempoRestante--; actualizarTextoReloj();
+                if (tiempoRestante <= 0) { clearInterval(timerInterval); Swal.fire('¡Tiempo Agotado!', 'Enviando respuestas...', 'info').then(() => { finalizarExamen(true); }); }
+            }, 1000);
+        }
+        function actualizarTextoReloj() {
+            let h = Math.floor(tiempoRestante / 3600); let m = Math.floor((tiempoRestante % 3600) / 60); let s = tiempoRestante % 60;
+            document.getElementById('reloj-texto').innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            if(tiempoRestante < 600) { document.getElementById('reloj-flotante').classList.replace('bg-slate-900', 'bg-red-600'); } 
+        }
+        function detenerReloj() { clearInterval(timerInterval); document.getElementById('reloj-flotante').classList.add('hidden'); document.getElementById('reloj-flotante').classList.replace('bg-red-600', 'bg-slate-900'); }
+        function abandonarExamen() { detenerReloj(); cargarMisExamenes(); }
+
+        async function finalizarExamen(forzado = false) {
+            if (!forzado) {
+                let faltantes = [];
+                examenActivo.forEach((pregunta, index) => { if (!(pregunta.id in respuestasUsuario)) faltantes.push(index + 1); });
+
+                if (faltantes.length > 0) {
+                    let msj = `Te faltan <b>${faltantes.length}</b> preguntas.<br><br>` + (faltantes.length <= 15 ? `<b>Revisa:</b> ${faltantes.join(', ')}` : `<b>Revisa:</b> ${faltantes.slice(0, 15).join(', ')}... y más.`);
+                    const confirmar = await Swal.fire({ title: '¿Entregar incompleto?', html: msj, icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, entregar así', cancelButtonText: 'Volver a revisar', confirmButtonColor: '#ef4444' });
+                    if (!confirmar.isConfirmed) return;
+                } else {
+                    const confirmarOk = await Swal.fire({ title: '¿Finalizar examen?', text: 'Has contestado todas las preguntas. ¿Deseas entregar?', icon: 'question', showCancelButton: true, confirmButtonText: 'Sí, calificar', cancelButtonText: 'Revisar de nuevo', confirmButtonColor: '#22c55e' });
+                    if (!confirmarOk.isConfirmed) return;
+                }
             }
+
+            detenerReloj(); 
+            examenActivo.forEach(p => { if (!(p.id in respuestasUsuario)) respuestasUsuario[p.id] = null; });
 
             let aciertos = 0; let desgloseHTML = '';
             examenActivo.forEach((pregunta, index) => {
                 const idSeleccionado = respuestasUsuario[pregunta.id]; 
-                const opcionCorrecta = pregunta.opciones.find(o => o.es_correcta === 1);
-                const opcionElegida = pregunta.opciones.find(o => o.id === idSeleccionado);
-                let esCorrecto = false;
-                if (opcionElegida && opcionElegida.es_correcta === 1) { aciertos++; esCorrecto = true; }
+                const opcionCorrecta = pregunta.opciones.find(o => o.es_correcta === 1); const opcionElegida = pregunta.opciones.find(o => o.id === idSeleccionado);
+                let esCorrecto = false; if (opcionElegida && opcionElegida.es_correcta === 1) { aciertos++; esCorrecto = true; }
 
-                desgloseHTML += `<div class="p-4 rounded-lg border ${esCorrecto ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}"><p class="font-semibold text-gray-800 mb-1">${index + 1}. ${pregunta.texto}</p>${esCorrecto ? `<p class="text-sm text-green-700">✅ <b>Correcto:</b> ${opcionCorrecta.texto}</p>` : `<p class="text-sm text-red-700 mb-1">❌ <b>Tu respuesta:</b> ${opcionElegida ? opcionElegida.texto : '<i>Sin contestar</i>'}</p><p class="text-sm text-green-700">💡 <b>Respuesta correcta:</b> ${opcionCorrecta.texto}</p>`}</div>`;
+                // Formateador automático para listas numéricas dentro del texto
+                let textoFormateado = pregunta.texto.replace(/ (\d+\.) /g, '<br><br><b class="text-slate-800">$1</b> ');
+
+                desgloseHTML += `<div class="p-4 rounded-lg border ${esCorrecto ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}"><p class="font-semibold text-gray-800 mb-1">${index + 1}. ${textoFormateado}</p>${esCorrecto ? `<p class="text-sm text-green-700">✅ <b>Correcto:</b> ${opcionCorrecta.texto}</p>` : `<p class="text-sm text-red-700 mb-1">❌ <b>Tu respuesta:</b> ${opcionElegida ? opcionElegida.texto : '<i>Sin contestar</i>'}</p><p class="text-sm text-green-700">💡 <b>Respuesta correcta:</b> ${opcionCorrecta.texto}</p>`}</div>`;
             });
 
             document.getElementById('texto-calificacion').innerText = `${aciertos} / ${examenActivo.length}`;
-            
-            const calificacionDecimal = ((aciertos / examenActivo.length) * 10).toFixed(1);
-            const colorNota = calificacionDecimal >= 6.0 ? 'text-green-600' : 'text-red-500';
+            const calificacionDecimal = ((aciertos / examenActivo.length) * 10).toFixed(1); const colorNota = calificacionDecimal >= 6.0 ? 'text-green-600' : 'text-red-500';
             document.getElementById('texto-calificacion-decimal').innerHTML = `Nota: <span class="${colorNota}">${calificacionDecimal}</span>`;
-
             document.getElementById('contenedor-desglose').innerHTML = desgloseHTML;
 
-            await fetch('/guardar-resultado', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ usuario_id: usuarioActualId, cuestionario_id: cuestionarioActualId, aciertos: aciertos, total: examenActivo.length }) });
+            await fetch('/guardar-resultado', { 
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ 
+                    usuario_id: usuarioActualId, cuestionario_id: cuestionarioActualId, aciertos: aciertos, total: examenActivo.length, respuestas: respuestasUsuario, 
+                    es_repaso: esExamenDeRepaso, es_simulacion: esSimulacionGlobal, categoria_id: categoriaActualSimulacionId, repaso_de_simulacion: esRepasoSimulacionGlobal
+                }) 
+            });
+            
             cambiarVista('vista-resultados');
         }
 
-        function guardarResultadosPDF() {
-            const titulo = document.querySelector('#vista-resultados h2')?.innerText || 'Resultados';
-            const calificacion = document.getElementById('texto-calificacion')?.innerText || '';
-            const nota = document.getElementById('texto-calificacion-decimal')?.innerText || '';
-            document.title = `Resultados - ${calificacion} - ${new Date().toLocaleDateString('es-MX')}`;
-            window.print();
-            document.title = 'Plataforma de Evaluaciones';
+        // --- HISTORIAL COMPRIMIDO ---
+        function renderizarCategoriasHistorial() {
+            const contenedor = document.getElementById('contenedor-mi-historial'); contenedor.innerHTML = '';
+            if (miHistorialGlobal.length === 0) { contenedor.innerHTML = '<p class="text-gray-500 italic text-sm">Aún no has finalizado ningún simulacro.</p>'; return; }
+
+            const categorias = {};
+            miHistorialGlobal.forEach(h => {
+                let nombreCat = h.categoria_nombre || 'Módulo General'; let colorCat = h.categoria_color || '#64748b';
+                if(h.es_repaso) { nombreCat = h.repaso_de_simulacion ? `🚨 Repaso: Simulación ${h.categoria_nombre}` : `🚨 Repaso: Módulos ${h.categoria_nombre}`; colorCat = '#ef4444'; }
+                if(h.es_simulacion) { nombreCat = `🎓 Simulación Final: ${h.categoria_nombre}`; colorCat = '#eab308'; }
+
+                if(!categorias[nombreCat]) categorias[nombreCat] = { color: colorCat, cantidad: 0 };
+                categorias[nombreCat].cantidad++;
+            });
+
+            for (const [nombre, datos] of Object.entries(categorias)) {
+                const nombreSeguro = encodeURIComponent(nombre);
+                contenedor.innerHTML += `
+                    <button onclick="verHistorialDeCategoria('${nombreSeguro}')" class="w-full bg-white py-3 px-4 rounded-lg hover:shadow-md transition shadow-sm text-left flex justify-between items-center border border-gray-200">
+                        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background-color: ${datos.color};"></span><p class="font-bold text-gray-700">${nombre}</p></div>
+                        <p class="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded">${datos.cantidad} intento(s)</p>
+                    </button>`;
+            }
+        }
+
+        function verHistorialDeCategoria(nombreSeguro) {
+            const nombreCat = decodeURIComponent(nombreSeguro);
+            const contenedor = document.getElementById('contenedor-mi-historial');
+            contenedor.innerHTML = `<button onclick="renderizarCategoriasHistorial()" class="text-sm font-bold text-slate-500 hover:text-slate-800 mb-4 flex items-center gap-1 transition">← Volver</button>`;
+            
+            const historial = miHistorialGlobal.filter(h => { 
+                let catAsignada = h.categoria_nombre || 'Módulo General';
+                if(h.es_repaso) catAsignada = h.repaso_de_simulacion ? `🚨 Repaso: Simulación ${h.categoria_nombre}` : `🚨 Repaso: Módulos ${h.categoria_nombre}`;
+                if(h.es_simulacion) catAsignada = `🎓 Simulación Final: ${h.categoria_nombre}`;
+                return catAsignada === nombreCat; 
+            });
+            
+            historial.forEach(h => {
+                const fechaObj = new Date(h.fecha.replace(' ', 'T') + 'Z'); const fechaBonita = fechaObj.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+                const calificacionDecimal = ((h.aciertos / h.total_preguntas) * 10).toFixed(1); const colorNota = (h.aciertos / h.total_preguntas) >= 0.6 ? 'text-green-600' : 'text-red-500';
+                
+                let colorHex = h.categoria_color || '#64748b'; 
+                if(h.es_repaso) colorHex = '#ef4444';
+                if(h.es_simulacion) colorHex = '#eab308';
+
+                contenedor.innerHTML += `
+                    <div onclick="verDetalleIntento(${h.id}, ${h.aciertos}, ${h.total_preguntas}, '${calificacionDecimal}')" class="bg-white mb-2 p-3 border rounded-lg shadow-sm flex justify-between items-center cursor-pointer hover:bg-slate-50 transition border-l-4" style="border-left-color: ${colorHex};">
+                        <div class="text-left"><p class="font-bold text-sm text-gray-800">${h.titulo}</p><p class="text-xs text-gray-500">${fechaBonita}</p></div>
+                        <div class="text-right"><p class="font-black ${colorNota} text-lg">${calificacionDecimal}</p><p class="text-xs text-gray-500 font-bold">${h.aciertos}/${h.total_preguntas} aciertos</p></div>
+                    </div>`;
+            });
+        }
+
+        async function verDetalleIntento(resultado_id, aciertos, total, decimal) {
+            try {
+                document.getElementById('historial-texto-calificacion').innerText = `${aciertos} / ${total}`;
+                const colorNota = parseFloat(decimal) >= 6.0 ? 'text-green-600' : 'text-red-500';
+                document.getElementById('historial-texto-decimal').innerHTML = `Nota: <span class="${colorNota}">${decimal}</span>`;
+
+                const res = await fetch(`/detalle-intento/${resultado_id}`); const detalles = await res.json();
+                let desgloseHTML = '';
+                detalles.forEach((d, index) => {
+                    const esCorrecto = d.es_correcta === 1;
+                    
+                    // Formateador automático para listas numéricas en los resultados del historial
+                    let textoFormateado = d.texto_pregunta.replace(/ (\d+\.) /g, '<br><br><b class="text-slate-800">$1</b> ');
+
+                    desgloseHTML += `<div class="p-4 rounded-lg border ${esCorrecto ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}"><p class="font-semibold text-gray-800 mb-1">${index + 1}. ${textoFormateado}</p>${esCorrecto ? `<p class="text-sm text-green-700">✅ <b>Correcto:</b> ${d.opcion_correcta}</p>` : `<p class="text-sm text-red-700 mb-1">❌ <b>Tu respuesta:</b> ${d.opcion_elegida ? d.opcion_elegida : '<i>Sin contestar</i>'}</p><p class="text-sm text-green-700">💡 <b>Respuesta correcta:</b> ${d.opcion_correcta}</p>`}</div>`;
+                });
+                document.getElementById('historial-contenedor-desglose').innerHTML = desgloseHTML;
+                cambiarVista('vista-historial-detalle');
+            } catch (error) { Swal.fire('Error', 'No se pudo cargar el detalle del examen', 'error'); }
         }
     </script>
 </body>
